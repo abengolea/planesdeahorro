@@ -31,10 +31,10 @@ export default function Home() {
         )}
         <div className="relative z-10 p-4 max-w-4xl mx-auto">
           <h1 className="font-headline text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
-            Defendemos sus derechos en Planes de Ahorro
+            Defiendo tus derechos en Planes de Ahorro
           </h1>
           <p className="mt-4 text-lg md:text-xl text-blue-100 max-w-3xl mx-auto">
-            Somos un equipo de abogados especializados en conflictos con administradoras de planes de ahorro. Si su cuota aumentó desmedidamente o tiene problemas con su plan, podemos ayudarlo.
+            Soy el Dr. Adrián Bengolea, abogado especialista en conflictos con administradoras de planes de ahorro. Si su cuota aumentó desmedidamente o tiene problemas con su plan, puedo ayudarlo.
           </p>
           <div className="mt-8 flex justify-center gap-4">
             <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
