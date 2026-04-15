@@ -1,0 +1,572 @@
+{
+  "entities": {
+    "Tag": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tag",
+      "type": "object",
+      "description": "Represents a keyword or category used to classify legal rulings (fallos) and doctrine articles.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Tag entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the tag (e.g., 'Cláusulas Abusivas', 'Secuestro Prendario')."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "AdminUser": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AdminUser",
+      "type": "object",
+      "description": "Represents an administrative user with permissions to manage content in the application. Authentication is handled externally by Firebase Auth.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AdminUser entity, typically corresponding to a Firebase Auth UID."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the administrator.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the administrator."
+        },
+        "roles": {
+          "type": "array",
+          "description": "A list of roles assigned to the administrator, defining their permissions (e.g., 'contentEditor', 'superAdmin').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the administrator's profile was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the administrator's profile was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "name",
+        "roles",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Fallo": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Fallo",
+      "type": "object",
+      "description": "Represents a judicial ruling (fallo) related to savings plans, displayed on the platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Fallo entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the judicial ruling."
+        },
+        "slug": {
+          "type": "string",
+          "description": "A URL-friendly identifier for the fallo, used in dynamic pages (e.g., '/fallos/[slug]')."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A brief summary of the judicial ruling."
+        },
+        "content": {
+          "type": "string",
+          "description": "The full text or detailed content of the judicial ruling."
+        },
+        "tribunal": {
+          "type": "string",
+          "description": "The court or tribunal that issued the ruling."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date when the judicial ruling was issued.",
+          "format": "date-time"
+        },
+        "tagIds": {
+          "type": "array",
+          "description": "References to Tags associated with this ruling for categorization. (Relationship: Tag N:N Fallo)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when this fallo record was created in the system.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when this fallo record was last updated.",
+          "format": "date-time"
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Indicates whether the fallo is publicly visible on the website."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "slug",
+        "summary",
+        "content",
+        "tribunal",
+        "date",
+        "createdAt",
+        "updatedAt",
+        "published"
+      ]
+    },
+    "Doctrina": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Doctrina",
+      "type": "object",
+      "description": "Represents a legal doctrine article or blog post, providing expert analysis and information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Doctrina entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the doctrine article."
+        },
+        "slug": {
+          "type": "string",
+          "description": "A URL-friendly identifier for the article, used in dynamic pages (e.g., '/doctrina/[slug]')."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A brief introductory summary of the doctrine article."
+        },
+        "content": {
+          "type": "string",
+          "description": "The full body content of the doctrine article."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Reference to the AdminUser who authored this article. (Relationship: AdminUser 1:N Doctrina)"
+        },
+        "publishDate": {
+          "type": "string",
+          "description": "The date when the doctrine article was published.",
+          "format": "date-time"
+        },
+        "tagIds": {
+          "type": "array",
+          "description": "References to Tags associated with this article for categorization. (Relationship: Tag N:N Doctrina)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when this doctrine article record was created in the system.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when this doctrine article record was last updated.",
+          "format": "date-time"
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Indicates whether the doctrine article is publicly visible on the website."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "slug",
+        "summary",
+        "content",
+        "authorId",
+        "publishDate",
+        "createdAt",
+        "updatedAt",
+        "published"
+      ]
+    },
+    "FAQ": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FAQ",
+      "type": "object",
+      "description": "Represents a frequently asked question and its answer, optimized for SEO.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FAQ entity."
+        },
+        "question": {
+          "type": "string",
+          "description": "The text of the frequently asked question."
+        },
+        "answer": {
+          "type": "string",
+          "description": "The detailed answer to the frequently asked question."
+        },
+        "order": {
+          "type": "number",
+          "description": "An integer representing the display order of the FAQ item."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when this FAQ record was created in the system.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when this FAQ record was last updated.",
+          "format": "date-time"
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Indicates whether the FAQ item is publicly visible on the website."
+        }
+      },
+      "required": [
+        "id",
+        "question",
+        "answer",
+        "order",
+        "createdAt",
+        "updatedAt",
+        "published"
+      ]
+    },
+    "LegalProblemSection": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LegalProblemSection",
+      "type": "object",
+      "description": "Represents a dedicated section/page detailing a specific legal problem related to savings plans, optimized for SEO.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the LegalProblemSection entity."
+        },
+        "slug": {
+          "type": "string",
+          "description": "The URL-friendly slug for the problem section (e.g., 'liquidacion', 'rescision')."
+        },
+        "title": {
+          "type": "string",
+          "description": "The main title of the legal problem section page."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "The clear and detailed explanation of the legal problem."
+        },
+        "seoTitle": {
+          "type": "string",
+          "description": "The SEO-optimized title for the page's metadata."
+        },
+        "seoDescription": {
+          "type": "string",
+          "description": "The SEO-optimized description for the page's metadata."
+        },
+        "ctaBlockContent": {
+          "type": "string",
+          "description": "Content for the Call to Action block within this section, prompting users to consult their case."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when this legal problem section record was created in the system.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when this legal problem section record was last updated.",
+          "format": "date-time"
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Indicates whether the legal problem section is publicly visible on the website."
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "title",
+        "explanation",
+        "seoTitle",
+        "seoDescription",
+        "ctaBlockContent",
+        "createdAt",
+        "updatedAt",
+        "published"
+      ]
+    },
+    "CaseEvaluation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CaseEvaluation",
+      "type": "object",
+      "description": "Represents a user's case evaluation submitted through the AI chat assistant.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CaseEvaluation entity."
+        },
+        "clientName": {
+          "type": "string",
+          "description": "The full name of the client submitting the case (from AI output 'nombre')."
+        },
+        "whatsapp": {
+          "type": "string",
+          "description": "The client's WhatsApp contact number."
+        },
+        "email": {
+          "type": "string",
+          "description": "The client's email address.",
+          "format": "email"
+        },
+        "city": {
+          "type": "string",
+          "description": "The city where the client resides (from AI output 'ciudad')."
+        },
+        "province": {
+          "type": "string",
+          "description": "The province where the client resides (from AI output 'provincia')."
+        },
+        "adminCompany": {
+          "type": "string",
+          "description": "The name of the administering company for the savings plan (from AI output 'administradora')."
+        },
+        "planStatus": {
+          "type": "string",
+          "description": "The current status of the savings plan (from AI output 'estadoPlan').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "adjudicated": {
+          "type": "boolean",
+          "description": "Indicates if the savings plan has been adjudicated (from AI output 'adjudicado')."
+        },
+        "vehicleReceived": {
+          "type": "boolean",
+          "description": "Indicates if the vehicle related to the plan has been received (from AI output 'vehiculoRecibido')."
+        },
+        "groupOrder": {
+          "type": "string",
+          "description": "The group and order number of the plan, if known (from AI output 'grupoOrden')."
+        },
+        "mainProblemExplanation": {
+          "type": "string",
+          "description": "The client's free-text explanation of the main problem (from AI output 'problemaPrincipal')."
+        },
+        "factsSummary": {
+          "type": "string",
+          "description": "An AI-generated summary of the case facts based on the chat conversation (from AI output 'resumenHechos')."
+        },
+        "availableDocumentation": {
+          "type": "array",
+          "description": "A list of documentation the client indicates they have (from AI output 'documentacionDisponible'). E.g., ['contrato', 'liquidación', 'recibos'].",
+          "items": {
+            "type": "string"
+          }
+        },
+        "urgencyLevel": {
+          "type": "string",
+          "description": "The detected urgency level of the case (from AI output 'urgencia').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "urgencyReason": {
+          "type": "string",
+          "description": "The reason identified for the urgency level (from AI output 'motivoUrgencia')."
+        },
+        "possibleLegalCategory": {
+          "type": "string",
+          "description": "An AI-suggested main legal category for the case (from AI output 'posibleCategoriaJuridica')."
+        },
+        "suggestedNextAction": {
+          "type": "string",
+          "description": "An AI-suggested next action or step based on the case summary (from AI output 'proximaAccionSugerida')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the case evaluation was submitted.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the case evaluation within the system.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "chatTranscript": {
+          "type": "array",
+          "description": "An optional transcript of the entire chat conversation leading to the case evaluation. Useful for auditing and context.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "clientName",
+        "whatsapp",
+        "email",
+        "city",
+        "province",
+        "adminCompany",
+        "planStatus",
+        "adjudicated",
+        "vehicleReceived",
+        "mainProblemExplanation",
+        "factsSummary",
+        "availableDocumentation",
+        "urgencyLevel",
+        "urgencyReason",
+        "possibleLegalCategory",
+        "suggestedNextAction",
+        "createdAt",
+        "status"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/admin_users/{adminUserId}",
+        "definition": {
+          "entityName": "AdminUser",
+          "schema": {
+            "$ref": "#/backend/entities/AdminUser"
+          },
+          "description": "Stores administrative user profiles and their assigned roles. Document ID is the Firebase Auth UID. Used for Database Access Control (DBAC) roles.",
+          "params": [
+            {
+              "name": "adminUserId",
+              "description": "The unique Firebase Auth UID of the administrative user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tags/{tagId}",
+        "definition": {
+          "entityName": "Tag",
+          "schema": {
+            "$ref": "#/backend/entities/Tag"
+          },
+          "description": "Categorization labels for Fallos and Doctrina. Publicly readable, only modifiable by administrative users.",
+          "params": [
+            {
+              "name": "tagId",
+              "description": "The unique identifier for the tag."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/fallos/{falloId}",
+        "definition": {
+          "entityName": "Fallo",
+          "schema": {
+            "$ref": "#/backend/entities/Fallo"
+          },
+          "description": "Judicial rulings related to savings plans. Publicly readable if 'published' is true. Modifiable only by administrative users.",
+          "params": [
+            {
+              "name": "falloId",
+              "description": "The unique identifier for the judicial ruling."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/doctrina/{doctrinaId}",
+        "definition": {
+          "entityName": "Doctrina",
+          "schema": {
+            "$ref": "#/backend/entities/Doctrina"
+          },
+          "description": "Legal doctrine articles. Publicly readable if 'published' is true. Modifiable only by administrative users. Includes 'authorId' for specific author permissions.",
+          "params": [
+            {
+              "name": "doctrinaId",
+              "description": "The unique identifier for the doctrine article."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/faqs/{faqId}",
+        "definition": {
+          "entityName": "FAQ",
+          "schema": {
+            "$ref": "#/backend/entities/FAQ"
+          },
+          "description": "Frequently asked questions and their answers. Publicly readable if 'published' is true. Modifiable only by administrative users.",
+          "params": [
+            {
+              "name": "faqId",
+              "description": "The unique identifier for the FAQ item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/legal_problem_sections/{sectionId}",
+        "definition": {
+          "entityName": "LegalProblemSection",
+          "schema": {
+            "$ref": "#/backend/entities/LegalProblemSection"
+          },
+          "description": "Dedicated pages detailing specific legal problems. Publicly readable if 'published' is true. Modifiable only by administrative users.",
+          "params": [
+            {
+              "name": "sectionId",
+              "description": "The unique identifier for the legal problem section."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/case_evaluations/{caseEvaluationId}",
+        "definition": {
+          "entityName": "CaseEvaluation",
+          "schema": {
+            "$ref": "#/backend/entities/CaseEvaluation"
+          },
+          "description": "User case submissions from the AI chat assistant. Created anonymously by any user. Only readable and updatable by administrative users. Includes 'status' for workflow management.",
+          "params": [
+            {
+              "name": "caseEvaluationId",
+              "description": "The unique identifier for the case evaluation submission."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure prioritizes clarity, security, and scalability by adhering to the core design principles, especially Authorization Independence and Structural Segregation.\n\n**1. Authorization Independence:**\n*   **Content Collections (Fallos, Doctrina, FAQs, LegalProblemSections):** Authorization for public visibility is achieved by including a `published: boolean` field directly within each document. This eliminates the need for `get()` calls to parent collections or external documents to determine read access for public users. For example, a rule can simply be `allow read: if resource.data.published == true;`.\n*   **Doctrina Authoring:** The `Doctrina` entity includes an `authorId` field, allowing rules to directly check `request.auth.uid == resource.data.authorId` for author-specific permissions without requiring additional `get()` operations on other collections for that specific document's authorization.\n*   **Case Evaluations:** Each `CaseEvaluation` document is entirely self-contained, meaning all data relevant for its processing and status is within the document itself. No authorization dependencies exist on other collections for its creation or subsequent access by administrators.\n*   **Global Role Checks (AdminUser):** While the `isAdmin` helper function (used for `read` and `write` access across most content and `CaseEvaluation` collections) involves a `get()` call to the `/admin_users/{adminUserId}` collection, this is a controlled exception. This `get()` is for retrieving global user metadata (roles) tied to the `request.auth.uid` itself, not for establishing hierarchical authorization dependencies between application data entities. It directly implements the DBAC principle by storing roles in the database and associating them with the user's UID.\n\n**2. Structural Segregation (Homogeneous Security Posture):**\n*   **Public vs. Admin Access:** Content entities like `/fallos`, `/doctrina`, `/faqs`, and `/legal_problem_sections` are stored in top-level collections. Their `published` status internally segregates visibility (public vs. admin-only for drafts/unpublished). This keeps content relevant to a single entity type together while providing distinct access based on a direct document field.\n*   **Admin User Data:** The `/admin_users` collection is dedicated solely to administrator profiles, ensuring that user authentication and role management data are separated from application-specific content.\n*   **Case Evaluations:** The `/case_evaluations` collection is entirely segregated. It's designed for anonymous creation and admin-only reading/updating, ensuring that sensitive case information is never publicly exposed and has a distinct security profile.\n\n**3. Querying with Authorization Predicates (QAPs):**\n*   **Public Content Listings:** For collections like `/fallos` or `/doctrina`, a client can perform a secure `list` query (e.g., `db.collection('fallos').where('published', '==', true).get()`). The Firestore security rules enforce `allow list: if resource.data.published == true;`, guaranteeing that only published documents are returned, and the rules are not acting as filters that could lead to incomplete result sets or insecure data exposure.\n*   **Admin-only Listings:** For the `/case_evaluations` collection, `list` operations are secure for administrators because the rule `allow list: if isAdmin(request.auth.uid);` ensures that only authenticated and authorized administrators can retrieve the documents. This is a clear QAP as it applies to the entire collection and its access is binary based on the requesting user's role.\n\nBy implementing these strategies, the Firestore structure provides a clear, debuggable, and scalable foundation for the application's security and data management."
+  }
+}

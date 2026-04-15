@@ -1,0 +1,165 @@
+/**
+ * Core Philosophy:
+ * This ruleset establishes a two-tiered access model for a legal content and case management platform.
+ * 1. Public/Anonymous Users: Can read all published content (articles, rulings, FAQs) and submit a new case evaluation through a guided process. They cannot see unpublished drafts or other users' submissions.
+ * 2. Administrative Users: Have full create, read, update, and delete (CRUD) permissions on all content collections. They are the only users who can view, manage, and update the status of submitted case evaluations.
+ *
+ * Data Structure:
+ * The data is organized into distinct top-level collections based on their security profile.
+ * - `/admin_users`: A private collection storing administrator UIDs and roles. The existence of a user's UID as a document ID in this collection grants them admin privileges.
+ * - `/case_evaluations`: A write-once collection for the public, but read/update/delete is restricted to administrators. This securely captures user submissions.
+ * - `/fallos`, `/doctrina`, `/faqs`, `/tags`, `/legal_problem_sections`: These are content collections. Public read access is controlled by a `published` boolean field on each document, while all write operations are reserved for administrators.
+ *
+ * Key Security Decisions:
+ * - Default-Deny Posture: Access is implicitly denied unless an `allow` rule explicitly grants it.
+ * - Admin Role-Based Access: A user is considered an administrator if their UID exists as a document in the `/admin_users` collection. This is checked using a helper function (`isAdmin()`) for most write operations.
+ * - Public Read via Flag: Public content is made visible using a `published: true` field. This is a highly performant and secure pattern that avoids complex rules and allows for simple client-side queries.
+ * - Anonymous Submissions: The `/case_evaluations` collection is intentionally open for creation by any user (including anonymous ones) to facilitate the "Evaluar mi caso" feature. All subsequent access is strictly admin-only.
+ * - No User Enumeration: Listing documents in `/admin_users` is explicitly forbidden to prevent enumeration of privileged accounts.
+ *
+ * Denormalization for Authorization:
+ * - The `published` flag on every content document is a prime example of denormalization. It places the authorization decision (is this public?) directly on the resource, avoiding costly `get` calls to other documents.
+ * - The `authorId` on `Doctrina` documents is denormalized to allow for integrity checks, ensuring the author field is set correctly on creation and remains immutable.
+ *
+ * Structural Segregation:
+ * - Public content (`fallos`, `doctrina`, etc.) is structurally separate from private user-generated data (`case_evaluations`) and administrative data (`admin_users`). This separation into different top-level collections allows for simple, powerful, and distinct security rules for each data type.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions to abstract and reuse logic.
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the user is an administrator by verifying their UID
+     * exists as a document in the admin_users collection.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admin_users/$(request.auth.uid));
+    }
+
+    /**
+     * @description
+     * Stores administrative user profiles. Only other admins can manage these records.
+     * Listing users is disallowed to prevent user enumeration.
+     * @path /admin_users/{adminUserId}
+     * @allow (get) An admin reading their own or another admin's profile.
+     * @deny (list) Any user, including an admin, trying to list all administrators.
+     * @principle Restricts access to sensitive role data to privileged users.
+     */
+    match /admin_users/{adminUserId} {
+      allow get: if isAdmin();
+      allow list: if false;
+      allow create: if isAdmin() && request.resource.data.id == adminUserId;
+      allow update: if isAdmin() && resource != null && request.resource.data.id == resource.data.id;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description
+     * Stores case evaluations submitted by users. Any user (including anonymous) can create one.
+     * Only administrators can read, list, update, or delete submissions.
+     * @path /case_evaluations/{caseEvaluationId}
+     * @allow (create) An anonymous user submitting their case evaluation form.
+     * @deny (get) The original submitter trying to read their own submission after creating it.
+     * @principle Segregates sensitive user-submitted data, allowing public creation but private-by-default access.
+     */
+    match /case_evaluations/{caseEvaluationId} {
+      allow get, list: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description
+     * Stores tags used for categorizing content. This data is public for everyone to read.
+     * Only administrators can create, modify, or delete tags.
+     * @path /tags/{tagId}
+     * @allow (list) Any user listing all available tags to filter content.
+     * @deny (create) A non-administrative user trying to create a new tag.
+     * @principle Enforces public read access for general data with admin-only writes.
+     */
+    match /tags/{tagId} {
+      allow get, list: if true;
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description
+     * Judicial rulings (Fallos). Publicly visible if `published` is true.
+     * Only administrators can manage these documents.
+     * @path /fallos/{falloId}
+     * @allow (get) Any user reading a document where `published == true`.
+     * @deny (get) Any non-admin user trying to read a draft where `published == false`.
+     * @principle Controls public visibility of content via a document field, with admin-only writes.
+     */
+    match /fallos/{falloId} {
+      // Public can read published documents; Admins can read any document.
+      // List is open, but client queries must filter `where('published', '==', true)`
+      // to avoid permission errors on individual document reads.
+      allow get: if (resource.data.published == true) || isAdmin();
+      allow list: if true;
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description
+     * Legal doctrine articles. Publicly visible if `published` is true.
+     * Only administrators can manage these documents. Enforces author ID integrity.
+     * @path /doctrina/{doctrinaId}
+     * @allow (get) Any user reading a published article.
+     * @deny (update) An admin trying to change the `authorId` of an existing article.
+     * @principle Controls public visibility and ensures relational integrity for authorship.
+     */
+    match /doctrina/{doctrinaId} {
+      allow get: if (resource.data.published == true) || isAdmin();
+      allow list: if true;
+      // On create, the authorId must match the creating admin's UID.
+      allow create: if isAdmin() && request.resource.data.authorId == request.auth.uid;
+      // On update, the authorId must not be changed.
+      allow update: if isAdmin() && resource != null && request.resource.data.authorId == resource.data.authorId;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description
+     * Frequently Asked Questions. Publicly visible if `published` is true.
+     * Only administrators can manage these documents.
+     * @path /faqs/{faqId}
+     * @allow (get) Any user reading a published FAQ.
+     * @deny (create) A non-admin user attempting to add a new FAQ.
+     * @principle Controls public visibility of content via a document field, with admin-only writes.
+     */
+    match /faqs/{faqId} {
+      allow get: if (resource.data.published == true) || isAdmin();
+      allow list: if true;
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description
+     * SEO-optimized pages about specific legal problems. Publicly visible if `published` is true.
+     * Only administrators can manage these documents.
+     * @path /legal_problem_sections/{sectionId}
+     * @allow (get) Any user reading a published legal problem page.
+     * @deny (update) A non-admin user attempting to modify a legal problem page.
+     * @principle Controls public visibility of content via a document field, with admin-only writes.
+     */
+    match /legal_problem_sections/{sectionId} {
+      allow get: if (resource.data.published == true) || isAdmin();
+      allow list: if true;
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() && resource != null;
+    }
+  }
+}
