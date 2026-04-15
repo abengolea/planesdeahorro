@@ -87,7 +87,7 @@ service cloud.firestore {
      * @principle Enforces public read access for general data with admin-only writes.
      */
     match /tags/{tagId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create: if isAdmin();
       allow update, delete: if isAdmin() && resource != null;
     }
@@ -103,10 +103,8 @@ service cloud.firestore {
      */
     match /fallos/{falloId} {
       // Public can read published documents; Admins can read any document.
-      // List is open, but client queries must filter `where('published', '==', true)`
-      // to avoid permission errors on individual document reads.
-      allow get: if (resource.data.published == true) || isAdmin();
-      allow list: if true;
+      // Client-side queries MUST filter for `published == true` for non-admins.
+      allow read: if (resource.data.published == true) || isAdmin();
       allow create: if isAdmin();
       allow update, delete: if isAdmin() && resource != null;
     }
@@ -121,8 +119,7 @@ service cloud.firestore {
      * @principle Controls public visibility and ensures relational integrity for authorship.
      */
     match /doctrina/{doctrinaId} {
-      allow get: if (resource.data.published == true) || isAdmin();
-      allow list: if true;
+      allow read: if (resource.data.published == true) || isAdmin();
       // On create, the authorId must match the creating admin's UID.
       allow create: if isAdmin() && request.resource.data.authorId == request.auth.uid;
       // On update, the authorId must not be changed.
@@ -140,8 +137,7 @@ service cloud.firestore {
      * @principle Controls public visibility of content via a document field, with admin-only writes.
      */
     match /faqs/{faqId} {
-      allow get: if (resource.data.published == true) || isAdmin();
-      allow list: if true;
+      allow read: if (resource.data.published == true) || isAdmin();
       allow create: if isAdmin();
       allow update, delete: if isAdmin() && resource != null;
     }
@@ -156,8 +152,7 @@ service cloud.firestore {
      * @principle Controls public visibility of content via a document field, with admin-only writes.
      */
     match /legal_problem_sections/{sectionId} {
-      allow get: if (resource.data.published == true) || isAdmin();
-      allow list: if true;
+      allow read: if (resource.data.published == true) || isAdmin();
       allow create: if isAdmin();
       allow update, delete: if isAdmin() && resource != null;
     }
