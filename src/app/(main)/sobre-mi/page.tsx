@@ -30,7 +30,7 @@ export default function AboutPage() {
             </div>
           </div>
           <div className="md:col-span-3">
-            <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary">Dr. Nombre Apellido</h1>
+            <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary">Dr. Adrian Bengolea</h1>
             <h2 className="font-headline text-xl text-muted-foreground mt-2">Abogado - Especialista en Defensa del Consumidor</h2>
             
             <div className="prose lg:prose-lg mt-6 max-w-none dark:prose-invert">
