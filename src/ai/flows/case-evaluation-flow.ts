@@ -54,12 +54,14 @@ const CaseEvaluationOutputSchema = z.object({
 export type CaseEvaluation = z.infer<typeof CaseEvaluationOutputSchema>;
 
 // Esquema para la salida de la conversación (la respuesta del chat)
-const ConversationOutputSchema = z.object({
+export const ConversationOutputSchema = z.object({
   nextMessage: z.string().describe("El siguiente mensaje del asistente para continuar la conversación."),
   quickReplies: z.array(z.string()).optional().describe("Sugerencias de respuestas rápidas para el usuario."),
   isFinished: z.boolean().describe("Indica si el asistente ha recopilado toda la información y la conversación ha terminado."),
   structuredData: CaseEvaluationOutputSchema.optional().describe("El objeto JSON con todos los datos recopilados. Solo se proporciona cuando isFinished es true."),
 });
+export type ConversationOutput = z.infer<typeof ConversationOutputSchema>;
+
 
 // El prompt principal que guía al asistente de IA
 const caseEvaluationPrompt = ai.definePrompt({
@@ -159,7 +161,7 @@ const evaluateCaseFlow = ai.defineFlow(
 // Función exportada que envuelve el flujo
 export async function evaluateCase(
   history: ChatMessage[]
-): Promise<ChatMessage> {
+): Promise<ConversationOutput> {
   // Mapea el historial del chat al formato que espera el prompt de Genkit
   const flowInput = {
     history: history.map(msg => ({ role: msg.role, content: msg.content })).filter(msg => msg.role !== 'system'),
@@ -167,12 +169,5 @@ export async function evaluateCase(
 
   const result = await evaluateCaseFlow(flowInput);
 
-  return {
-    id: `asistente-${Date.now()}`,
-    role: 'assistant',
-    content: result.nextMessage,
-    quickReplies: result.quickReplies,
-    isFinished: result.isFinished,
-    // El structuredData se manejará en la acción del servidor cuando isFinished sea true
-  };
+  return result;
 }
