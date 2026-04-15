@@ -14,14 +14,15 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Fallo } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useTransition } from 'react';
-import { CalendarIcon, Loader2, Trash } from 'lucide-react';
+import React, { useTransition } from 'react';
+import { CalendarIcon, Loader2, Sparkles, Trash } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { summarizeLegalRuling } from '@/ai/flows/summarize-legal-ruling-flow';
 
 
 const falloSchema = z.object({
@@ -58,6 +59,7 @@ export function FalloForm({ initialData }: FalloFormProps) {
   const firestore = useFirestore();
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleting] = useTransition();
+  const [isAnalyzing, startAnalyzing] = useTransition();
 
   const form = useForm<FalloFormValues>({
     resolver: zodResolver(falloSchema),
@@ -83,6 +85,36 @@ export function FalloForm({ initialData }: FalloFormProps) {
       form.setValue('slug', slugify(title), { shouldValidate: true });
     }
   }, [title, form, initialData]);
+
+  const handleAnalyzeContent = () => {
+    const content = form.getValues('content');
+    if (!content || content.length < 50) {
+      toast({
+        variant: 'destructive',
+        title: 'Contenido insuficiente',
+        description: 'Por favor, ingrese el contenido completo del fallo (mínimo 50 caracteres) antes de analizarlo.',
+      });
+      return;
+    }
+    startAnalyzing(async () => {
+      try {
+        const result = await summarizeLegalRuling({ rulingText: content });
+        form.setValue('summary', result.summary, { shouldValidate: true });
+        form.setValue('tags', result.tags.join(', '), { shouldValidate: true });
+        toast({
+          title: 'Análisis completado',
+          description: 'Se generaron el resumen y las etiquetas con IA.',
+        });
+      } catch (error) {
+        console.error('Error analyzing content:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error de IA',
+          description: 'No se pudo analizar el contenido. Intente de nuevo.',
+        });
+      }
+    });
+  };
 
   const onSubmit = (values: FalloFormValues) => {
     startTransition(async () => {
@@ -155,23 +187,29 @@ export function FalloForm({ initialData }: FalloFormProps) {
                 />
                  <FormField
                   control={form.control}
-                  name="summary"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Resumen</FormLabel>
-                      <FormControl><Textarea placeholder="Un resumen breve y conciso del fallo..." {...field} rows={4} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
                   name="content"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Contenido Completo</FormLabel>
                       <FormControl><Textarea placeholder="El contenido detallado del fallo..." {...field} rows={15} /></FormControl>
-                       <FormDescription>Puede usar Markdown para formatear el texto.</FormDescription>
+                       <FormDescription>Pegue aquí el texto completo del fallo para analizarlo.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button type="button" variant="outline" onClick={handleAnalyzeContent} disabled={isAnalyzing}>
+                  {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                  Analizar Contenido con IA
+                </Button>
+
+                <FormField
+                  control={form.control}
+                  name="summary"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Resumen</FormLabel>
+                      <FormControl><Textarea placeholder="Un resumen breve y conciso del fallo (generado con IA o manual)..." {...field} rows={4} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -199,8 +237,8 @@ export function FalloForm({ initialData }: FalloFormProps) {
                     )}
                     />
                     <div className="flex gap-2">
-                        <Button type="submit" disabled={isPending} className="flex-1">
-                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" disabled={isPending || isAnalyzing} className="flex-1">
+                            {(isPending || isAnalyzing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {initialData ? 'Actualizar Fallo' : 'Guardar Fallo'}
                         </Button>
                         {initialData && (
@@ -269,7 +307,7 @@ export function FalloForm({ initialData }: FalloFormProps) {
                                         !field.value && "text-muted-foreground"
                                     )}
                                     >
-                                    {field.value ? format(field.value, "PPP") : <span>Seleccione una fecha</span>}
+                                    {field.value ? format(field.value, "PPP", { timeZone: 'UTC' }) : <span>Seleccione una fecha</span>}
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                     </Button>
                                 </FormControl>
@@ -289,7 +327,7 @@ export function FalloForm({ initialData }: FalloFormProps) {
                             <FormItem>
                             <FormLabel>Tags (Etiquetas)</FormLabel>
                             <FormControl><Input placeholder="clausulas abusivas, medida cautelar" {...field} /></FormControl>
-                            <FormDescription>Separar con comas.</FormDescription>
+                            <FormDescription>Separar con comas. Se pueden generar con IA.</FormDescription>
                             <FormMessage />
                             </FormItem>
                         )}

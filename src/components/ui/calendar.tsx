@@ -2,12 +2,20 @@
 
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker } from "react-day-picker"
+import { DayPicker, type DateFormatter } from "react-day-picker"
+import { es } from 'date-fns/locale';
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
+
+const formatCaption: DateFormatter = (month, options) => {
+  const year = month.getFullYear();
+  const monthName = options?.locale?.localize?.month(month.getMonth());
+  return `${monthName?.charAt(0).toUpperCase()}${monthName?.slice(1)} ${year}`;
+};
+
 
 function Calendar({
   className,
@@ -17,7 +25,9 @@ function Calendar({
 }: CalendarProps) {
   return (
     <DayPicker
+      locale={es}
       showOutsideDays={showOutsideDays}
+      formatters={{ formatCaption }}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",

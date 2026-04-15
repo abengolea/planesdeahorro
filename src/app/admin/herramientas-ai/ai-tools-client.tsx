@@ -132,7 +132,7 @@ export function AiToolsClient() {
             <Card className="bg-muted/50">
               <CardHeader>
                 <CardTitle>Esquema Sugerido</CardTitle>
-              </CardHeader>
+              </Header>
               <CardContent>
                 {isDrafting ? (
                     <div className="flex items-center space-x-2 text-muted-foreground">

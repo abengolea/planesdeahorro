@@ -17,6 +17,7 @@ export type SummarizeLegalRulingInput = z.infer<typeof SummarizeLegalRulingInput
 
 const SummarizeLegalRulingOutputSchema = z.object({
   summary: z.string().describe('A concise summary of the legal ruling.'),
+  tags: z.array(z.string()).describe('A list of relevant keywords or tags for the ruling.'),
 });
 export type SummarizeLegalRulingOutput = z.infer<typeof SummarizeLegalRulingOutputSchema>;
 
@@ -29,13 +30,13 @@ const prompt = ai.definePrompt({
   input: { schema: SummarizeLegalRulingInputSchema },
   output: { schema: SummarizeLegalRulingOutputSchema },
   prompt: `Eres un experto legal especializado en planes de ahorro en Argentina.
-Tu tarea es resumir de forma concisa el siguiente fallo judicial.
-El resumen debe ser objetivo, capturando los puntos clave del fallo y su implicancia legal, sin superar los 150-200 palabras.
+Tu tarea es analizar el siguiente fallo judicial y realizar dos cosas:
+1.  **Resumir** de forma concisa el fallo. El resumen debe ser objetivo, capturando los puntos clave y su implicancia legal, sin superar las 200 palabras.
+2.  **Etiquetar** el fallo con 5 a 7 palabras o frases clave que lo categoricen. Devuelve estas etiquetas en el campo 'tags'.
 
 Fallo Judicial:
 {{{rulingText}}}
-
-Resumen:`,
+`,
 });
 
 const summarizeLegalRulingFlow = ai.defineFlow(
