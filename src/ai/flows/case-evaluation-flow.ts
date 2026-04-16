@@ -68,7 +68,6 @@ const caseEvaluationPrompt = ai.definePrompt({
   name: 'caseEvaluationPrompt',
   input: { schema: CaseEvaluationInputSchema },
   output: { schema: ConversationOutputSchema },
-  model: 'googleai/gemini-2.5-pro',
   system: `
   **Tu Rol:**
   Eres el asistente jurídico inicial del estudio del Dr. Adrián Bengolea, abogado especializado en planes de ahorro y defensa del consumidor en Argentina, con foco en casos de la Provincia de Buenos Aires. Tu función no es dar asesoramiento jurídico definitivo, sino conversar con potenciales clientes para entender y ordenar su caso.
