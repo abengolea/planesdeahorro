@@ -97,20 +97,20 @@ export function FalloForm({ initialData }: FalloFormProps) {
       return;
     }
     startAnalyzing(async () => {
-      try {
-        const result = await summarizeRulingAction({ rulingText: content });
-        form.setValue('summary', result.summary, { shouldValidate: true });
-        form.setValue('tags', result.tags.join(', '), { shouldValidate: true });
-        toast({
-          title: 'Análisis completado',
-          description: 'Se generaron el resumen y las etiquetas con IA.',
-        });
-      } catch (error) {
-        console.error('Error analyzing content:', error);
+      const result = await summarizeRulingAction({ rulingText: content });
+      
+      if (result.error) {
         toast({
           variant: 'destructive',
           title: 'Error de IA',
-          description: 'No se pudo analizar el contenido. Intente de nuevo.',
+          description: result.error,
+        });
+      } else if (result.data) {
+        form.setValue('summary', result.data.summary, { shouldValidate: true });
+        form.setValue('tags', result.data.tags.join(', '), { shouldValidate: true });
+        toast({
+          title: 'Análisis completado',
+          description: 'Se generaron el resumen y las etiquetas con IA.',
         });
       }
     });

@@ -27,13 +27,12 @@ export function AiToolsClient() {
     }
     startSummarizing(async () => {
       setSummary('');
-      try {
-        const result = await summarizeRulingAction({ rulingText });
-        const formattedResult = `Resumen:\n${result.summary}\n\nEtiquetas: ${result.tags.join(', ')}`;
+      const result = await summarizeRulingAction({ rulingText });
+      if (result.error) {
+        toast({ variant: 'destructive', title: 'Error al generar el resumen.', description: result.error });
+      } else if (result.data) {
+        const formattedResult = `Resumen:\n${result.data.summary}\n\nEtiquetas: ${result.data.tags.join(', ')}`;
         setSummary(formattedResult);
-      } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: 'Error al generar el resumen.', description: 'Por favor, intente de nuevo más tarde.' });
       }
     });
   };
@@ -45,12 +44,11 @@ export function AiToolsClient() {
     }
     startDrafting(async () => {
       setOutline('');
-      try {
-        const result = await draftOutlineAction({ topicOrKeywords: topic });
-        setOutline(result.outline);
-      } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: 'Error al generar el esquema.', description: 'Por favor, intente de nuevo más tarde.' });
+      const result = await draftOutlineAction({ topicOrKeywords: topic });
+      if (result.error) {
+        toast({ variant: 'destructive', title: 'Error al generar el esquema.', description: result.error });
+      } else if (result.data) {
+        setOutline(result.data.outline);
       }
     });
   };

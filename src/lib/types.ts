@@ -63,3 +63,9 @@ export type ChatMessage = {
   quickReplies?: string[];
   isFinished?: boolean;
 };
+
+// Tipo genérico para respuestas de Server Actions
+export type ServerActionResponse<T> = {
+  data: T | null;
+  error: string | null;
+};
