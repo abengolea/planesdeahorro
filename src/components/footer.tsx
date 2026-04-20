@@ -30,27 +30,31 @@ const footerSections = [
 
 export function AppFooter() {
   return (
-    <footer className="bg-card border-t">
-      <div className="container mx-auto px-4 py-12 md:py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+    <footer className="bg-primary text-primary-foreground border-t border-white/10">
+      <div className="container mx-auto px-4 py-14 md:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-10">
           <div className="col-span-2 lg:col-span-2 flex flex-col">
-            <Logo />
-            <p className="mt-4 text-muted-foreground max-w-sm">
-              Asesoramiento legal especializado en planes de ahorro para la defensa de sus derechos como consumidor.
+            <Logo inverted />
+            <div className="w-8 h-[2px] bg-accent mt-5 mb-5" />
+            <p className="text-white/55 text-sm leading-relaxed max-w-xs">
+              Asesoramiento legal especializado en reclamos por planes de ahorro.
             </p>
-            <p className="mt-4 text-sm text-muted-foreground">
-                Atención virtual para toda Argentina.
+            <p className="mt-4 text-xs text-white/40">
+              Atención a residentes en la Provincia de Buenos Aires (matriculación del titular).
             </p>
           </div>
           {footerSections.map((section) => (
             <div key={section.title}>
-              <h3 className="font-headline text-sm font-semibold tracking-wider uppercase text-primary">
+              <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-accent mb-5">
                 {section.title}
               </h3>
-              <ul className="mt-4 space-y-2">
+              <ul className="space-y-3">
                 {section.links.map((link) => (
                   <li key={link.label}>
-                    <Link href={link.href} className="text-muted-foreground hover:text-primary transition-colors">
+                    <Link
+                      href={link.href}
+                      className="text-sm text-white/50 hover:text-white transition-colors"
+                    >
                       {link.label}
                     </Link>
                   </li>
@@ -59,9 +63,19 @@ export function AppFooter() {
             </div>
           ))}
         </div>
-        <div className="mt-12 border-t pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} JurisPlan. Todos los derechos reservados.</p>
-          <p className="mt-1">La información en este sitio no constituye asesoramiento legal. Para una evaluación de su caso, contáctenos.</p>
+        <div className="mt-14 border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/35">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>&copy; {new Date().getFullYear()} Adrián Bengolea. Todos los derechos reservados.</span>
+            <Link
+              href="/admin"
+              className="text-[10px] text-white/25 hover:text-white/45 transition-colors"
+            >
+              Admin
+            </Link>
+          </p>
+          <p className="text-center md:text-right max-w-sm">
+            La información en este sitio no constituye asesoramiento legal. Para una evaluación de su caso, contáctenos.
+          </p>
         </div>
       </div>
     </footer>

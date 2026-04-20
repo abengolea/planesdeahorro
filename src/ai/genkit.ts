@@ -1,18 +1,51 @@
 import 'server-only';
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
+import { openAI } from '@genkit-ai/compat-oai/openai';
 
-// Debugging: Confirma que la variable de entorno está siendo leída en el runtime.
-console.log('GEMINI_API_KEY loaded in runtime?', !!process.env.GEMINI_API_KEY);
+const googleApiKey =
+  process.env.GEMINI_API_KEY ||
+  process.env.GOOGLE_API_KEY ||
+  process.env.GOOGLE_GENAI_API_KEY;
+
+const openaiApiKey = process.env.OPENAI_API_KEY?.trim() || undefined;
+
+const plugins = [];
+if (openaiApiKey) {
+  plugins.push(openAI({ apiKey: openaiApiKey }));
+}
+if (googleApiKey) {
+  plugins.push(googleAI({ apiKey: googleApiKey }));
+}
+if (plugins.length === 0) {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(
+      '[genkit] No hay OPENAI_API_KEY ni GEMINI/GOOGLE_API_KEY. Definí al menos una en `.env.local`.',
+    );
+  }
+  plugins.push(openAI());
+  plugins.push(googleAI());
+}
+
+/** Con clave de OpenAI y sin `LLM_PROVIDER=google`, usamos OpenAI (útil si Gemini tiene cuota/facturación bloqueada). */
+const useOpenAI = Boolean(openaiApiKey) && process.env.LLM_PROVIDER !== 'google';
+
+const openaiModelId = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const geminiModelId = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+const defaultModel = useOpenAI
+  ? openAI.model(openaiModelId)
+  : googleAI.model(geminiModelId);
+
+if (process.env.NODE_ENV === 'development') {
+  if (useOpenAI) {
+    console.info('[genkit] Modelo por defecto: OpenAI (%s)', openaiModelId);
+  } else {
+    console.info('[genkit] Modelo por defecto: Google (%s)', geminiModelId);
+  }
+}
 
 export const ai = genkit({
-  plugins: [
-    // Se pasa explícitamente la API key para asegurar la autenticación correcta.
-    googleAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    }),
-  ],
-  // CORRECCIÓN: Se usa el helper `googleAI.model()` para definir el modelo por defecto.
-  // Esto asegura que Genkit utilice la instancia del plugin configurado (con su API key y versión de API correcta, v1).
-  model: googleAI.model('gemini-2.5-flash'),
+  plugins,
+  model: defaultModel,
 });

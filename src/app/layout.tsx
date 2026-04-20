@@ -3,13 +3,17 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { AppHeader } from '@/components/header';
-import { AppFooter } from '@/components/footer';
+import { ConditionalFooter } from '@/components/conditional-footer';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'JurisPlan LegalTech - Expertos en Planes de Ahorro',
-  description: 'Asesoramiento y defensa legal en conflictos con planes de ahorro automotriz en Argentina. Liquidación, rescisión, cláusulas abusivas y más.',
+  title: {
+    default: 'Adrián Bengolea – Reclamos por planes de ahorro',
+    template: '%s | Adrián Bengolea – Reclamos por planes de ahorro',
+  },
+  description:
+    'Reclamos y asesoramiento legal en conflictos con planes de ahorro automotriz en Argentina. Liquidación, rescisión, cláusulas abusivas y más.',
 };
 
 export default function RootLayout({
@@ -31,7 +35,7 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <AppHeader />
           <main className="flex-grow">{children}</main>
-          <AppFooter />
+          <ConditionalFooter />
           <WhatsAppButton />
           <Toaster />
         </FirebaseClientProvider>

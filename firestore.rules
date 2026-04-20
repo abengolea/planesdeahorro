@@ -50,12 +50,14 @@ service cloud.firestore {
      * Stores administrative user profiles. Only other admins can manage these records.
      * Listing users is disallowed to prevent user enumeration.
      * @path /admin_users/{adminUserId}
-     * @allow (get) An admin reading their own or another admin's profile.
+     * @allow (get) A signed-in user reading their own UID document (to verify admin) or an admin reading any profile.
      * @deny (list) Any user, including an admin, trying to list all administrators.
      * @principle Restricts access to sensitive role data to privileged users.
      */
     match /admin_users/{adminUserId} {
-      allow get: if isAdmin();
+      // Self-read: allows the client to verify admin status after login without already being "admin".
+      // Admins may still read any admin profile (e.g. support tools).
+      allow get: if (isSignedIn() && request.auth.uid == adminUserId) || isAdmin();
       allow list: if false;
       allow create: if isAdmin() && request.resource.data.id == adminUserId;
       allow update: if isAdmin() && resource != null && request.resource.data.id == resource.data.id;
@@ -104,8 +106,9 @@ service cloud.firestore {
     match /fallos/{falloId} {
       // Public can GET a single document if published, or Admins can get any.
       allow get: if (resource.data.published == true) || isAdmin();
-      // Public can LIST docs only if they query for published=true. Admins can list all.
-      allow list: if isAdmin() || request.query.where.published == true;
+      // List: use resource.data (request.query has no `where`; only limit/offset/orderBy).
+      // Queries with where('published','==',true) satisfy resource.data.published == true for all results.
+      allow list: if isAdmin() || resource.data.published == true;
       allow create: if isAdmin();
       allow update, delete: if isAdmin() && resource != null;
     }
@@ -121,7 +124,7 @@ service cloud.firestore {
      */
     match /doctrina/{doctrinaId} {
       allow get: if (resource.data.published == true) || isAdmin();
-      allow list: if isAdmin() || request.query.where.published == true;
+      allow list: if isAdmin() || resource.data.published == true;
       // On create, the authorId must match the creating admin's UID.
       allow create: if isAdmin() && request.resource.data.authorId == request.auth.uid;
       // On update, the authorId must not be changed.
@@ -140,7 +143,7 @@ service cloud.firestore {
      */
     match /faqs/{faqId} {
       allow get: if (resource.data.published == true) || isAdmin();
-      allow list: if isAdmin() || request.query.where.published == true;
+      allow list: if isAdmin() || resource.data.published == true;
       allow create: if isAdmin();
       allow update, delete: if isAdmin() && resource != null;
     }
@@ -156,9 +159,22 @@ service cloud.firestore {
      */
     match /legal_problem_sections/{sectionId} {
       allow get: if (resource.data.published == true) || isAdmin();
-      allow list: if isAdmin() || request.query.where.published == true;
+      allow list: if isAdmin() || resource.data.published == true;
       allow create: if isAdmin();
       allow update, delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description
+     * Knowledge documents used to feed context to the AI case evaluation flow.
+     * These are private documents (letters, doctrinal positions, administrative precedents)
+     * managed exclusively by administrators. Never publicly accessible.
+     * @path /knowledge_docs/{docId}
+     * @allow (read, write) Administrators only.
+     * @principle Fully private collection for internal AI knowledge base management.
+     */
+    match /knowledge_docs/{docId} {
+      allow read, write: if isAdmin();
     }
   }
 }

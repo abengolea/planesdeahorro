@@ -2,7 +2,7 @@ import { ProblemPageLayout } from '@/components/problem-page-layout';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Cláusulas Abusivas en Planes de Ahorro | JurisPlan',
+  title: 'Cláusulas Abusivas en Planes de Ahorro',
   description: 'Identificamos y demandamos la nulidad de cláusulas abusivas en su contrato de plan de ahorro. Proteja sus derechos como consumidor.',
 };
 
@@ -19,7 +19,7 @@ export default function ClausulasAbusivasPage() {
       <h2 className='font-headline'>Ejemplos de Cláusulas Abusivas Comunes</h2>
       <p>En los planes de ahorro, las cláusulas abusivas más frecuentes son:</p>
       <ul>
-        <li><strong>Modificación del valor de la cuota:</strong> Cláusulas que permiten a la administradora modificar unilateralmente el precio del bien y, por ende, el valor de la cuota, sin una justificación clara y objetiva. Esta es la madre de todos los problemas.</li>
+        <li><strong>Ajustes unilaterales del precio del bien:</strong> Cláusulas que permiten a la administradora modificar unilateralmente el precio de lista del vehículo sin una justificación clara y objetiva, desbalanceando la relación contractual en perjuicio del consumidor.</li>
         <li><strong>Gastos de administración y sellados:</strong> Cláusulas que imponen cargos administrativos excesivos o cuyo concepto no está claro.</li>
         <li><strong>Seguros impuestos:</strong> Obligación de contratar seguros con compañías vinculadas a la administradora a precios superiores a los de mercado.</li>
         <li><strong>Penalidades por renuncia:</strong> Cláusulas que establecen multas desproporcionadas para los suscriptores que renuncian al plan.</li>

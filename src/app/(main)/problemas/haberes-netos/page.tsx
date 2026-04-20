@@ -2,7 +2,7 @@ import { ProblemPageLayout } from '@/components/problem-page-layout';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Cálculo de Haberes Netos en Planes de Ahorro | JurisPlan',
+  title: 'Cálculo de Haberes Netos en Planes de Ahorro',
   description: '¿La administradora calculó mal sus haberes netos? Reclame la diferencia. Asesoramiento legal para la correcta liquidación de su plan.',
 };
 

@@ -1,0 +1,38 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    /**
+     * Admin: documento admin_users/{uid} debe existir.
+     * Fallos / Doctrina: `fallos/{id}/original.pdf` y `doctrina/{id}/original.pdf`, máx. 12 MB, lectura pública.
+     */
+    function isAdmin() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/admin_users/$(request.auth.uid));
+    }
+
+    match /fallos/{falloId}/{fileName} {
+      allow read: if fileName == 'original.pdf';
+      allow delete: if fileName == 'original.pdf' && isAdmin();
+      allow create, update: if fileName == 'original.pdf'
+        && isAdmin()
+        && request.resource.size <= 12 * 1024 * 1024
+        && (
+          request.resource.contentType == 'application/pdf'
+          || request.resource.contentType == 'application/x-pdf'
+        );
+    }
+
+    /** Doctrina: PDF adjunto a artículos (`doctrina/{id}/original.pdf`). */
+    match /doctrina/{articleId}/{fileName} {
+      allow read: if fileName == 'original.pdf';
+      allow delete: if fileName == 'original.pdf' && isAdmin();
+      allow create, update: if fileName == 'original.pdf'
+        && isAdmin()
+        && request.resource.size <= 12 * 1024 * 1024
+        && (
+          request.resource.contentType == 'application/pdf'
+          || request.resource.contentType == 'application/x-pdf'
+        );
+    }
+  }
+}

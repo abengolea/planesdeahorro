@@ -1,6 +1,8 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  /* Evita empaquetar pdf.js en el bundle del servidor. */
+  serverExternalPackages: ['pdf-parse', 'pdfjs-dist'],
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,
@@ -31,11 +33,11 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    // Las llamadas a la IA pueden tardar más tiempo. Aumentamos el límite.
+    // PDFs subidos a server actions (extraer texto + IA).
     serverActions: {
-      maxDuration: 120,
-    }
-  }
+      bodySizeLimit: '12mb',
+    },
+  },
 };
 
 export default nextConfig;

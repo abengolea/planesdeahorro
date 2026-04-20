@@ -2,7 +2,7 @@ import { ProblemPageLayout } from '@/components/problem-page-layout';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Defensa en Secuestro Prendario de Plan de Ahorro | JurisPlan',
+  title: 'Defensa en Secuestro Prendario de Plan de Ahorro',
   description: '¿Recibió una intimación por secuestro prendario? Actúe rápido. Le ofrecemos la mejor defensa para proteger su vehículo y sus derechos.',
 };
 
@@ -31,8 +31,8 @@ export default function SecuestroPrendarioPage() {
       </p>
       <ul>
         <li><strong>Nulidad de la intimación:</strong> Si la intimación de pago no cumple con los requisitos legales, todo el proceso posterior puede ser nulo.</li>
-        <li><strong>Liquidación de deuda abusiva:</strong> A menudo, la deuda reclamada por la administradora es incorrecta, incluye intereses sobre intereses (anatocismo), gastos improcedentes o se basa en cuotas con aumentos abusivos. Discutir el monto de la deuda es una defensa clave.</li>
-        <li><strong>Planteo de abusividad de las cuotas:</strong> Se puede solicitar como defensa que se readecúe el valor de las cuotas que generaron la deuda, lo que puede reducirla significativamente o incluso demostrar que no existía tal mora.</li>
+        <li><strong>Liquidación de deuda abusiva:</strong> A menudo, la deuda reclamada por la administradora es incorrecta, incluye intereses sobre intereses (anatocismo), gastos improcedentes o se basa en un cálculo de cuotas o capital cuestionable. Discutir el monto de la deuda es una defensa clave.</li>
+        <li><strong>Impugnación del cálculo de la deuda:</strong> Se puede pedir al juez que revise cómo se armó el saldo reclamado; si el monto resulta inflado o mal liquidado, la mora o el propio reclamo de la administradora pueden verse afectados.</li>
         <li><strong>Ofrecimiento de pago:</strong> Presentarse en el juicio y ofrecer un plan de pagos razonable puede ser una vía para detener el secuestro y regularizar la situación.</li>
       </ul>
 

@@ -8,6 +8,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Bot, Loader2, Send, User, RotateCcw } from 'lucide-react';
 import { continueConversation } from '@/actions/evaluate-case';
+import {
+  CASE_EVAL_INITIAL_ASSISTANT_CONTENT,
+  CASE_EVAL_INITIAL_QUICK_REPLIES,
+} from '@/lib/case-eval-chat-constants';
 import type { ChatMessage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -15,15 +19,20 @@ import ReactMarkdown from 'react-markdown';
 const initialMessage: ChatMessage = {
   id: 'inicio',
   role: 'assistant',
-  content: "¡Hola! Soy Juris-IA, tu asistente jurídico virtual. Estoy aquí para hacerte algunas preguntas y entender mejor tu caso con el plan de ahorro. ¿Estás listo para comenzar?",
-  quickReplies: ["Sí, empecemos"],
+  content: CASE_EVAL_INITIAL_ASSISTANT_CONTENT,
+  quickReplies: [...CASE_EVAL_INITIAL_QUICK_REPLIES],
 };
+
+function generateSessionId(): string {
+  return `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
 
 
 export function ChatClient() {
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [input, setInput] = useState('');
   const [isPending, startTransition] = useTransition();
+  const [sessionId] = useState<string>(generateSessionId);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,7 +60,7 @@ export function ChatClient() {
 
     startTransition(async () => {
       const newHistory = [...messages, userMessage];
-      const assistantResponse = await continueConversation(newHistory);
+      const assistantResponse = await continueConversation(newHistory, sessionId);
       setMessages(prev => [...prev, assistantResponse]);
     });
   };

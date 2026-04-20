@@ -2,7 +2,7 @@ import { ProblemPageLayout } from '@/components/problem-page-layout';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Problemas con la Liquidación del Plan de Ahorro | JurisPlan',
+  title: 'Problemas con la Liquidación del Plan de Ahorro',
   description: 'Asesoramiento legal si su administradora demora o calcula mal la liquidación final de su plan de ahorro. Defendemos sus derechos.',
 };
 

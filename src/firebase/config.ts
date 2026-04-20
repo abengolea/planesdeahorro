@@ -1,8 +1,10 @@
 export const firebaseConfig = {
-  "projectId": "studio-6685306101-ef56b",
-  "appId": "1:122016303331:web:2ba6cdc55b5dba33735dd6",
-  "apiKey": "AIzaSyAWRYYLg2nZaClRqLSnGH16Ap-dH2i330U",
-  "authDomain": "studio-6685306101-ef56b.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "122016303331"
+  apiKey: 'AIzaSyBxTjpuG3-wp9PIxZsUG4-bCWD5RscYr_k',
+  authDomain: 'planesdeahorro-77c3e.firebaseapp.com',
+  projectId: 'planesdeahorro-77c3e',
+  /** Debe coincidir con Storage en la consola (p. ej. `*.firebasestorage.app` o `*.appspot.com`). Override: `FIREBASE_STORAGE_BUCKET`. */
+  storageBucket: 'planesdeahorro-77c3e.firebasestorage.app',
+  messagingSenderId: '170101606813',
+  appId: '1:170101606813:web:2edf310dad510e472b4774',
+  measurementId: 'G-S3SPPTT9TV',
 };

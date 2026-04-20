@@ -2,7 +2,7 @@ import { ProblemPageLayout } from '@/components/problem-page-layout';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Rescisión de Contrato de Plan de Ahorro | JurisPlan',
+  title: 'Rescisión de Contrato de Plan de Ahorro',
   description: '¿Quiere renunciar a su plan o la administradora lo rescindió? Conozca sus derechos y cómo recuperar su dinero. Asesoramiento legal experto.',
 };
 
