@@ -34,5 +34,29 @@ service firebase.storage {
           || request.resource.contentType == 'application/x-pdf'
         );
     }
+
+    /**
+     * Documentación que sube el cliente al portal (`case_client_docs/{caseId}/{uid}/...`).
+     * El caso debe tener `clientPortalUid` igual al usuario autenticado.
+     */
+    match /case_client_docs/{caseId}/{userId}/{fileName} {
+      function caseClientUploader() {
+        return request.auth != null
+          && request.auth.uid == userId
+          && firestore.exists(/databases/(default)/documents/case_evaluations/$(caseId))
+          && firestore.get(/databases/(default)/documents/case_evaluations/$(caseId)).data.clientPortalUid
+            == request.auth.uid;
+      }
+
+      allow read: if isAdmin() || caseClientUploader();
+      allow create: if caseClientUploader()
+        && request.resource.size <= 15 * 1024 * 1024
+        && (
+          request.resource.contentType == 'application/pdf'
+          || request.resource.contentType == 'application/x-pdf'
+        );
+      allow update: if false;
+      allow delete: if isAdmin() || caseClientUploader();
+    }
   }
 }

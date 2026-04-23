@@ -28,8 +28,8 @@ import {
 import type { ServerActionResponse } from '@/lib/types';
 import { userFacingAiErrorMessage } from '@/ai/llm-retry';
 
-/** Evita exceder contexto del modelo con PDFs muy largos. */
-const MAX_DOCTRINE_TEXT_CHARS = 120_000;
+/** Evita exceder contexto del modelo con PDFs muy largos (doctrina y fallos). */
+const MAX_PDF_ANALYSIS_TEXT_CHARS = 120_000;
 
 export async function summarizeRulingAction(
   input: SummarizeLegalRulingInput
@@ -122,7 +122,12 @@ export async function analyzeFalloPdfAction(
       };
     }
 
-    const aiResult = await summarizeLegalRuling({ rulingText: extractedText });
+    const forModel =
+      extractedText.length > MAX_PDF_ANALYSIS_TEXT_CHARS
+        ? `${extractedText.slice(0, MAX_PDF_ANALYSIS_TEXT_CHARS)}\n\n[… Texto truncado por longitud …]`
+        : extractedText;
+
+    const aiResult = await summarizeLegalRuling({ rulingText: forModel });
 
     return {
       data: {
@@ -193,8 +198,8 @@ export async function analyzeDoctrinePdfAction(
     }
 
     const forModel =
-      extractedText.length > MAX_DOCTRINE_TEXT_CHARS
-        ? `${extractedText.slice(0, MAX_DOCTRINE_TEXT_CHARS)}\n\n[… Texto truncado por longitud …]`
+      extractedText.length > MAX_PDF_ANALYSIS_TEXT_CHARS
+        ? `${extractedText.slice(0, MAX_PDF_ANALYSIS_TEXT_CHARS)}\n\n[… Texto truncado por longitud …]`
         : extractedText;
 
     const aiResult = await summarizeDoctrineDocument({ documentText: forModel });

@@ -1,10 +1,26 @@
 import type { Metadata } from 'next';
+import { EB_Garamond, Inter } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { AppHeader } from '@/components/header';
 import { ConditionalFooter } from '@/components/conditional-footer';
 import { FirebaseClientProvider } from '@/firebase';
+
+// ── Fuentes locales (descargadas en build, sin dependencia de CDN) ──────────
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const ebGaramond = EB_Garamond({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-eb-garamond',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: {
@@ -21,15 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="es" className={cn(inter.variable, ebGaramond.variable)}>
       <body className={cn('font-body antialiased min-h-screen flex flex-col')}>
         <FirebaseClientProvider>
           <AppHeader />

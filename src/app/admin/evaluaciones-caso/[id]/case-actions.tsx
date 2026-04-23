@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/provider';
 import type { CaseEvaluationSubmission } from '@/lib/types';
 import type { Timestamp } from 'firebase/firestore';
@@ -10,7 +11,11 @@ import {
   isCaseEvaluationStatus,
   isTerminalCaseStatus,
 } from '@/lib/case-evaluation-status';
-import { resolveCaseEvaluation } from '@/actions/case-evaluation-admin';
+import {
+  deleteCaseEvaluation,
+  resolveCaseEvaluation,
+  setCaseEvaluationArchived,
+} from '@/actions/case-evaluation-admin';
 import { draftAcceptCaseMessageForEvaluation } from '@/actions/draft-accept-case-message';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +34,15 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 function formatTs(ts: Timestamp | undefined): string {
   if (!ts || typeof ts.toDate !== 'function') return '—';
@@ -52,10 +66,14 @@ export function CaseEvaluationActions({
   evaluationId: string;
   row: CaseEvaluationSubmission;
 }) {
+  const router = useRouter();
   const { user } = useUser();
   const { toast } = useToast();
   const [dialog, setDialog] = useState<DialogKey>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [internalNote, setInternalNote] = useState('');
   const [clientMessage, setClientMessage] = useState('');
@@ -111,6 +129,63 @@ export function CaseEvaluationActions({
       });
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function toggleArchived(nextArchived: boolean) {
+    if (!user) {
+      toast({ title: 'No hay sesión', description: 'Volvé a iniciar sesión.', variant: 'destructive' });
+      return;
+    }
+    setArchiving(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await setCaseEvaluationArchived(token, evaluationId, nextArchived);
+      if (!res.ok) {
+        toast({ title: 'No se pudo actualizar', description: res.error, variant: 'destructive' });
+        return;
+      }
+      toast({
+        title: nextArchived ? 'Caso archivado' : 'Caso restaurado',
+        description: nextArchived
+          ? 'Ya no aparece en el listado de activos.'
+          : 'Volvió a mostrarse como activo.',
+      });
+    } catch (e) {
+      toast({
+        title: 'Error',
+        description: e instanceof Error ? e.message : 'Intentá de nuevo.',
+        variant: 'destructive',
+      });
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!user) {
+      toast({ title: 'No hay sesión', description: 'Volvé a iniciar sesión.', variant: 'destructive' });
+      return;
+    }
+    setDeleting(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await deleteCaseEvaluation(token, evaluationId);
+      if (!res.ok) {
+        toast({ title: 'No se pudo borrar', description: res.error, variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Caso eliminado', description: 'El registro se quitó de Firestore.' });
+      setDeleteOpen(false);
+      router.push('/admin/evaluaciones-caso');
+    } catch (e) {
+      toast({
+        title: 'Error',
+        description: e instanceof Error ? e.message : 'Intentá de nuevo.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -215,6 +290,32 @@ export function CaseEvaluationActions({
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => openDialog('cerrado')}>
               Cerrar
+            </Button>
+          </div>
+
+          <Separator />
+
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-xs font-medium uppercase text-muted-foreground w-full sm:w-auto">
+              Archivo y peligro
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={submitting || archiving || deleting}
+              onClick={() => void toggleArchived(!row.archived)}
+            >
+              {archiving ? <Loader2 className="h-4 w-4 animate-spin" /> : row.archived ? 'Desarchivar' : 'Archivar'}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={submitting || archiving || deleting}
+              onClick={() => setDeleteOpen(true)}
+            >
+              Eliminar definitivamente
             </Button>
           </div>
         </CardContent>
@@ -451,6 +552,28 @@ export function CaseEvaluationActions({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta evaluación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se borrará el documento en Firestore. Esta acción no se puede deshacer. Si solo querés ocultarla
+              del listado, usá Archivar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={() => void confirmDelete()}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Eliminar'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={dialog === 'cerrado'} onOpenChange={(o) => !o && setDialog(null)}>
         <DialogContent>

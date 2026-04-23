@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
@@ -66,7 +66,8 @@ const docSchema = z.object({
   active: z.boolean().default(false),
 });
 
-type DocFormValues = z.infer<typeof docSchema>;
+type DocFormInput = z.input<typeof docSchema>;
+type DocFormValues = z.output<typeof docSchema>;
 
 interface DocumentoFormProps {
   initialData?: KnowledgeDoc;
@@ -80,8 +81,8 @@ export function DocumentoForm({ initialData }: DocumentoFormProps) {
   const [isDeleting, startDeleting] = useTransition();
   const [isDescribing, startDescribing] = useTransition();
 
-  const form = useForm<DocFormValues>({
-    resolver: zodResolver(docSchema),
+  const form = useForm<DocFormInput, unknown, DocFormValues>({
+    resolver: zodResolver(docSchema) as unknown as Resolver<DocFormInput>,
     defaultValues: initialData
       ? {
           ...initialData,

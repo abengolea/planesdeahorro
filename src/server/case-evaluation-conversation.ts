@@ -123,10 +123,12 @@ export async function processCaseEvaluationConversation(
     if (assistantOutput.isFinished && assistantOutput.structuredData) {
       const caseData = assistantOutput.structuredData as CaseEvaluation;
 
+      let newEvaluationId: string | undefined;
+
       try {
         const db = getAdminFirestore();
 
-        await db.collection('case_evaluations').add({
+        const docRef = await db.collection('case_evaluations').add({
           ...caseData,
           sessionId: sessionId ?? null,
           channel,
@@ -134,7 +136,9 @@ export async function processCaseEvaluationConversation(
           notificasTenantId: options?.notificasTenantId ?? null,
           createdAt: FieldValue.serverTimestamp(),
           status: 'pendiente de revisión',
+          newForAdmin: true,
         });
+        newEvaluationId = docRef.id;
 
         if (sessionId) {
           await db
@@ -153,7 +157,7 @@ export async function processCaseEvaluationConversation(
       }
 
       try {
-        await sendCaseEvaluationEmail(caseData);
+        await sendCaseEvaluationEmail(caseData, { evaluationId: newEvaluationId });
       } catch (emailError) {
         console.error('[evaluate-case] Error al enviar email de notificación:', emailError);
       }

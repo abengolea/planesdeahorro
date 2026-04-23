@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(npx tsc *)",
+      "Bash(dir \"C:\\\\Users\\\\Adrian\\\\Documents\\\\mis-proyectos\\\\planesdeahorro\\\\.next\\\\cache\\\\fetch-cache\")",
+      "Bash(dir \"C:\\\\Users\\\\Adrian\\\\Documents\\\\mis-proyectos\\\\planesdeahorro\\\\.next\\\\server\\\\app\")",
+      "Bash(findstr /i \"font\")",
+      "Bash(findstr /r /s \"Arial\\\\|font-family\" \"C:\\\\Users\\\\Adrian\\\\Documents\\\\mis-proyectos\\\\planesdeahorro\\\\src\")",
+      "Bash(findstr /v \".next\")",
+      "Bash(findstr /v \"node_modules\")",
+      "Bash(dir \"C:\\\\Users\\\\Adrian\\\\Documents\\\\mis-proyectos\\\\planesdeahorro\\\\.next\\\\cache\\\\images\")",
+      "Bash(dir \"C:\\\\Users\\\\Adrian\\\\Documents\\\\mis-proyectos\\\\planesdeahorro\\\\node_modules\\\\next\\\\dist\\\\server\\\\lib\\\\font\")",
+      "Bash(dir \"C:\\\\Users\\\\Adrian\\\\Documents\\\\mis-proyectos\\\\planesdeahorro\\\\.next\\\\static\\\\media\")",
+      "Bash(findstr /i \"inter\\\\|garamond\\\\|woff\")"
+    ]
+  }
+}

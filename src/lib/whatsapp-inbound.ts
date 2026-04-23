@@ -87,3 +87,63 @@ export function isMenuReset(text: string): boolean {
   const t = text.trim().toLowerCase();
   return t === 'menu' || t === 'menú' || t === '0';
 }
+
+/** El hub ya enrutó al tenant; no hace falta el menú interno 1/2. */
+export function isHubRoutedToUs(
+  body: Record<string, unknown>,
+  tenantIdHub: string,
+): boolean {
+  const id = typeof body.tenantId === 'string' ? body.tenantId.trim() : '';
+  return Boolean(id && id === tenantIdHub.trim());
+}
+
+/** Respuestas cortas que no aportan contenido pero sí intención de seguir (evita loop con el menú). */
+export function isTrivialAck(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  if (!t) return false;
+  const acks = new Set([
+    'ok',
+    'okay',
+    'okey',
+    'dale',
+    'bueno',
+    'bien',
+    'sí',
+    'si',
+    'listo',
+    'perfecto',
+    'gracias',
+    'genial',
+    'ahí',
+    'ahi',
+    'va',
+    'vamos',
+  ]);
+  return acks.has(t);
+}
+
+/** Selección del listado del hub (p. ej. título "Planes de ahorro" o id planesdeahorro). */
+export function isLikelyHubTenantPickerReply(
+  text: string,
+  message: Record<string, unknown>,
+  tenantIdHub: string,
+): boolean {
+  const t = text.trim().toLowerCase();
+  const tid = tenantIdHub.trim().toLowerCase();
+  if (tid && (t === tid || t.includes(tid))) return true;
+  if (t.includes('planes') && t.includes('ahorr')) return true;
+
+  if (message.type === 'interactive') {
+    const inter = message.interactive as {
+      type?: string;
+      list_reply?: { id?: string; title?: string };
+      button_reply?: { id?: string; title?: string };
+    };
+    const id =
+      inter?.list_reply?.id?.trim().toLowerCase() ||
+      inter?.button_reply?.id?.trim().toLowerCase() ||
+      '';
+    if (tid && id === tid) return true;
+  }
+  return false;
+}

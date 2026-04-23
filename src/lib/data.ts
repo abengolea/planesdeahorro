@@ -18,8 +18,9 @@ export const frequentProblems: FrequentProblem[] = [
   },
   {
     slug: 'secuestro-prendario',
-    title: 'Secuestro Prendario',
-    description: 'Defensa ante acciones de secuestro del vehículo por falta de pago de cuotas.',
+    title: 'Ejecución Prendaria',
+    description:
+      'Defensa ante la ejecución prendaria y el secuestro del vehículo por falta de pago de cuotas.',
   },
   {
     slug: 'clausulas-abusivas',

@@ -1,18 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { FieldValue } from 'firebase-admin/firestore';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { FieldValue, type DocumentReference } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/firebase/admin';
 import { processCaseEvaluationConversation } from '@/server/case-evaluation-conversation';
 import {
   CASE_EVAL_INITIAL_ASSISTANT_CONTENT,
   CASE_EVAL_INITIAL_QUICK_REPLIES,
 } from '@/lib/case-eval-chat-constants';
-import { sendTextViaNotificasHub } from '@/lib/notificashub-client';
+import { notificasHubAuthHeaderName, sendTextViaNotificasHub } from '@/lib/notificashub-client';
 import {
   extractTextFromMetaMessage,
   formatAssistantReplyForWhatsapp,
+  isHubRoutedToUs,
+  isLikelyHubTenantPickerReply,
   isMenuChoiceEval,
   isMenuChoiceOther,
   isMenuReset,
+  isTrivialAck,
   normalizeWaPhoneDigits,
   shouldSkipMenuForEvalIntent,
   waSessionIdFromPhone,
@@ -20,6 +23,7 @@ import {
 import type { ChatMessage } from '@/lib/types';
 
 const SESSION_COLLECTION = 'whatsapp_case_sessions';
+const DEDUP_COLLECTION = 'whatsapp_inbound_dedup';
 
 const PENDING_MENU_TEXT = `Este número atiende más de un servicio. Para contarnos tu caso sobre el plan de ahorro (Dr. Adrián Bengolea, residentes en Provincia de Buenos Aires), respondé:
 1 — Sí, quiero continuar
@@ -30,6 +34,10 @@ En cualquier momento podés escribir MENU para ver esto de nuevo.`;
 
 const OTHER_SERVICE_TEXT =
   'Listo. Si este chat no era para el estudio de planes de ahorro, podés usar el mismo número según te indique la otra plataforma. Si más adelante querés contarnos tu caso sobre el plan, escribí MENU.';
+
+/** Tras elegir ya el servicio en NotificasHub, no repetimos el menú 1/2. */
+const HUB_ROUTED_RESET_HINT =
+  'Seguimos con tu consulta sobre el plan de ahorro. Contanos en una o varias frases qué te pasa, o escribí EVAL CASO para el flujo guiado. En cualquier momento podés escribir MENU.';
 
 type StoredChatMessage = {
   id: string;
@@ -44,8 +52,32 @@ type SessionDoc = {
   history?: StoredChatMessage[];
 };
 
-function authHeaderName(): string {
-  return process.env.NOTIFICASHUB_INBOUND_AUTH_HEADER?.trim() || 'x-internal-token';
+function dedupDocIdFromMessageId(messageId: string): string {
+  return Buffer.from(messageId.trim(), 'utf8').toString('base64url').slice(0, 800);
+}
+
+async function claimInboundMessageId(
+  messageId: string | undefined
+): Promise<{ status: 'new' | 'duplicate' | 'no_id'; ref: DocumentReference | null }> {
+  const trimmed = messageId?.trim() ?? '';
+  if (!trimmed) {
+    return { status: 'no_id', ref: null };
+  }
+  const db = getAdminFirestore();
+  const ref = db.collection(DEDUP_COLLECTION).doc(dedupDocIdFromMessageId(trimmed));
+  const outcome = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists) return 'duplicate' as const;
+    tx.set(ref, {
+      messageId: trimmed,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    return 'new' as const;
+  });
+  if (outcome === 'duplicate') {
+    return { status: 'duplicate', ref: null };
+  }
+  return { status: 'new', ref };
 }
 
 function initialAssistantMessage(): ChatMessage {
@@ -77,37 +109,18 @@ function deserializeMsg(m: StoredChatMessage): ChatMessage {
   };
 }
 
-export async function POST(req: NextRequest) {
-  const secret = process.env.NOTIFICASHUB_INBOUND_SECRET;
-  if (!secret?.trim()) {
-    console.error('[whatsapp/incoming] NOTIFICASHUB_INBOUND_SECRET no configurada');
-    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
-  }
-
-  const token = req.headers.get(authHeaderName());
-  if (token !== secret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
+async function processWhatsAppInboundBody(
+  body: Record<string, unknown>,
+  ctx: { tenantIdHub: string; inboundSecret: string }
+): Promise<void> {
   const from = typeof body.from === 'string' ? body.from.trim() : '';
   const message = (body.message ?? {}) as Record<string, unknown>;
   if (!from) {
-    return NextResponse.json({ error: 'Missing from' }, { status: 400 });
+    return;
   }
 
-  const tenantIdHub = process.env.NOTIFICASHUB_TENANT_ID?.trim();
-  const sendSecret = process.env.NOTIFICASHUB_SEND_SECRET?.trim() ?? secret;
-  if (!tenantIdHub) {
-    console.error('[whatsapp/incoming] NOTIFICASHUB_TENANT_ID no configurada');
-    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
-  }
+  const sendSecret =
+    process.env.NOTIFICASHUB_SEND_SECRET?.trim() ?? ctx.inboundSecret;
 
   const digits = normalizeWaPhoneDigits(from);
   const sessionKey = waSessionIdFromPhone(digits);
@@ -121,7 +134,7 @@ export async function POST(req: NextRequest) {
     const r = await sendTextViaNotificasHub({
       to: from,
       text,
-      tenantId: tenantIdHub,
+      tenantId: ctx.tenantIdHub,
       internalSecret: sendSecret,
     });
     if (!r.ok) {
@@ -133,12 +146,12 @@ export async function POST(req: NextRequest) {
     await send(
       'Para seguir con tu caso sobre el plan de ahorro necesitamos que escribas en texto (podés describir el problema en una o varias frases).'
     );
-    return NextResponse.json({ ok: true });
+    return;
   }
 
   if (!userText) {
     await send('No pudimos leer el mensaje. Enviá texto o elegí una opción de la lista.');
-    return NextResponse.json({ ok: true });
+    return;
   }
 
   const snap = await sessRef.get();
@@ -146,13 +159,15 @@ export async function POST(req: NextRequest) {
     ? (snap.data() as SessionDoc)
     : { routing: 'pending' };
 
+  const hubRouted = isHubRoutedToUs(body, ctx.tenantIdHub);
+
   if (isMenuReset(userText)) {
     await sessRef.set(
       { routing: 'pending', history: [], updatedAt: FieldValue.serverTimestamp() },
       { merge: true }
     );
-    await send(PENDING_MENU_TEXT);
-    return NextResponse.json({ ok: true });
+    await send(hubRouted ? HUB_ROUTED_RESET_HINT : PENDING_MENU_TEXT);
+    return;
   }
 
   if (session.routing === 'pending') {
@@ -162,66 +177,74 @@ export async function POST(req: NextRequest) {
         { merge: true }
       );
       await send(OTHER_SERVICE_TEXT);
-      return NextResponse.json({ ok: true });
+      return;
     }
 
     const menuPickEval = isMenuChoiceEval(userText);
     const directIntent = shouldSkipMenuForEvalIntent(userText);
+    const trivialAck = isTrivialAck(userText);
+    const hubPicker = isLikelyHubTenantPickerReply(userText, message, ctx.tenantIdHub);
 
-    if (menuPickEval || directIntent) {
-      const initial = initialAssistantMessage();
-      if (menuPickEval && !directIntent) {
-        await sessRef.set({
-          routing: 'case_eval',
-          history: [serializeMsg(initial)],
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-        await send(formatAssistantReplyForWhatsapp(initial.content, initial.quickReplies));
-        return NextResponse.json({ ok: true });
-      }
+    const internalGateOk =
+      hubRouted || menuPickEval || directIntent;
 
-      const history: ChatMessage[] = [
-        initial,
-        { id: `user-${Date.now()}`, role: 'user', content: userText },
-      ];
-
-      const reply = await processCaseEvaluationConversation(history, sessionKey, {
-        channel: 'whatsapp',
-        whatsappFrom: digits,
-        notificasTenantId: typeof body.tenantId === 'string' ? body.tenantId : null,
-      });
-
-      if (reply.role === 'system') {
-        await send(formatAssistantReplyForWhatsapp(reply.content));
-        return NextResponse.json({ ok: true });
-      }
-
-      const stored = [...history, reply].map(serializeMsg);
-      await sessRef.set({
-        routing: 'case_eval',
-        history: stored,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      await send(formatAssistantReplyForWhatsapp(reply.content, reply.quickReplies));
-      if (reply.isFinished) {
-        await sessRef.set({
-          routing: 'pending',
-          history: [],
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-      }
-      return NextResponse.json({ ok: true });
+    if (!internalGateOk) {
+      await sessRef.set(
+        { routing: 'pending', updatedAt: FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+      await send(PENDING_MENU_TEXT);
+      return;
     }
 
-    await sessRef.set(
-      { routing: 'pending', updatedAt: FieldValue.serverTimestamp() },
-      { merge: true }
-    );
-    await send(PENDING_MENU_TEXT);
-    return NextResponse.json({ ok: true });
+    const initial = initialAssistantMessage();
+
+    const initialOnly =
+      (menuPickEval && !directIntent) || (hubRouted && (trivialAck || hubPicker));
+
+    if (initialOnly) {
+      await sessRef.set({
+        routing: 'case_eval',
+        history: [serializeMsg(initial)],
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      await send(formatAssistantReplyForWhatsapp(initial.content, initial.quickReplies));
+      return;
+    }
+
+    const history: ChatMessage[] = [
+      initial,
+      { id: `user-${Date.now()}`, role: 'user', content: userText },
+    ];
+
+    const reply = await processCaseEvaluationConversation(history, sessionKey, {
+      channel: 'whatsapp',
+      whatsappFrom: digits,
+      notificasTenantId: typeof body.tenantId === 'string' ? body.tenantId : null,
+    });
+
+    if (reply.role === 'system') {
+      await send(formatAssistantReplyForWhatsapp(reply.content));
+      return;
+    }
+
+    const stored = [...history, reply].map(serializeMsg);
+    await sessRef.set({
+      routing: 'case_eval',
+      history: stored,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    await send(formatAssistantReplyForWhatsapp(reply.content, reply.quickReplies));
+    if (reply.isFinished) {
+      await sessRef.set({
+        routing: 'pending',
+        history: [],
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+    return;
   }
 
-  // case_eval
   let history: ChatMessage[] = (session.history ?? []).map(deserializeMsg);
   if (history.length === 0) {
     history = [initialAssistantMessage()];
@@ -237,7 +260,7 @@ export async function POST(req: NextRequest) {
 
   if (reply.role === 'system') {
     await send(formatAssistantReplyForWhatsapp(reply.content));
-    return NextResponse.json({ ok: true });
+    return;
   }
 
   const nextStored = [...history, reply].map(serializeMsg);
@@ -254,6 +277,85 @@ export async function POST(req: NextRequest) {
       history: [],
       updatedAt: FieldValue.serverTimestamp(),
     });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const secret = process.env.NOTIFICASHUB_INBOUND_SECRET;
+  if (!secret?.trim()) {
+    console.error('[whatsapp/incoming] NOTIFICASHUB_INBOUND_SECRET no configurada');
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+  }
+
+  const token = req.headers.get(notificasHubAuthHeaderName());
+  if (token !== secret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  const from = typeof body.from === 'string' ? body.from.trim() : '';
+  if (!from) {
+    return NextResponse.json({ error: 'Missing from' }, { status: 400 });
+  }
+
+  const tenantIdHub = process.env.NOTIFICASHUB_TENANT_ID?.trim();
+  if (!tenantIdHub) {
+    console.error('[whatsapp/incoming] NOTIFICASHUB_TENANT_ID no configurada');
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+  }
+
+  const hubMessageId =
+    typeof body.messageId === 'string' ? body.messageId : undefined;
+
+  let claim: { status: 'new' | 'duplicate' | 'no_id'; ref: DocumentReference | null };
+  try {
+    claim = await claimInboundMessageId(hubMessageId);
+  } catch (dedupErr) {
+    console.error(
+      '[whatsapp/incoming] dedup / Firestore falló; se sigue sin idempotencia',
+      dedupErr,
+    );
+    claim = { status: 'no_id', ref: null };
+  }
+
+  if (claim.status === 'duplicate') {
+    return NextResponse.json({ ok: true });
+  }
+
+  const dedupRef = claim.ref;
+
+  const processWithDedupCleanup = async () => {
+    try {
+      await processWhatsAppInboundBody(body, {
+        tenantIdHub,
+        inboundSecret: secret,
+      });
+    } catch (err) {
+      console.error('[whatsapp/incoming] process error', err);
+      if (dedupRef) {
+        try {
+          await dedupRef.delete();
+        } catch (delErr) {
+          console.error('[whatsapp/incoming] dedup delete after failure', delErr);
+        }
+      }
+    }
+  };
+
+  try {
+    after(processWithDedupCleanup);
+  } catch (afterErr) {
+    console.error(
+      '[whatsapp/incoming] after() falló; procesando en línea (sin cierre diferido)',
+      afterErr,
+    );
+    await processWithDedupCleanup();
   }
 
   return NextResponse.json({ ok: true });

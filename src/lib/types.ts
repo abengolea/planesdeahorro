@@ -122,6 +122,58 @@ export interface CaseEvaluationSubmission extends CaseEvaluation {
   adminInternalNote?: string;
   lastClientNotifiedAt?: Timestamp;
   lastClientNotifiedKind?: string;
+  /** Oculto del listado de “activos”; no borra el registro. */
+  archived?: boolean;
+  archivedAt?: Timestamp;
+  archivedByUid?: string;
+  archivedByEmail?: string | null;
+  dataUpdatedAt?: Timestamp;
+  dataUpdatedByUid?: string;
+  dataUpdatedByEmail?: string | null;
+  /** true al crear: el admin aún no abrió el detalle en el panel. */
+  newForAdmin?: boolean;
+  /** Marca de tiempo cuando un administrador vio el detalle (primera vez). */
+  adminViewedAt?: Timestamp;
+  adminViewedByUid?: string;
+  adminViewedByEmail?: string | null;
+  /** Firebase Auth UID del cliente con acceso al portal (misma cuenta que el email del caso). */
+  clientPortalUid?: string;
+  clientPortalLinkedAt?: Timestamp;
+}
+
+/** Movimiento visible en el expediente (subcolección `expediente_movimientos`). */
+export interface ExpedienteMovimiento {
+  id?: string;
+  createdAt?: Timestamp;
+  tipo?: 'sistema' | 'cliente' | 'estudio';
+  titulo: string;
+  detalle?: string;
+}
+
+/** Metadatos de archivo subido por el cliente (`client_uploads`). */
+export interface ClientCaseUpload {
+  id?: string;
+  storagePath: string;
+  fileName: string;
+  contentType?: string;
+  size?: number;
+  uploadedByUid: string;
+  uploadedAt?: Timestamp;
+}
+
+/** Perfil mínimo del portal (`client_portal_profiles/{uid}`). Solo lectura en cliente; escritura vía Admin SDK. */
+export interface ClientPortalProfile {
+  evaluationIds?: string[];
+  updatedAt?: Timestamp;
+}
+
+/** Mensaje del chat interno portal (`portal_chat`). */
+export interface PortalChatMessage {
+  id?: string;
+  text: string;
+  authorUid: string;
+  authorRole: 'client' | 'admin';
+  createdAt?: Timestamp;
 }
 
 // Tipo para los mensajes en el chat

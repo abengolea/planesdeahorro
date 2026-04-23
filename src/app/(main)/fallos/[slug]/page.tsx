@@ -1,6 +1,6 @@
 'use client';
 
-import { notFound, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where, limit } from 'firebase/firestore';
 import type { Fallo } from '@/lib/types';
@@ -77,7 +77,21 @@ export default function RulingDetailPage() {
   }
 
   if (!ruling) {
-    notFound();
+    return (
+      <div className="bg-card py-12 md:py-20">
+        <div className="container mx-auto px-4 max-w-lg text-center">
+          <Gavel className="mx-auto h-10 w-10 text-muted-foreground/40 mb-4" />
+          <h1 className="font-headline text-2xl font-bold text-foreground mb-2">Fallo no disponible</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            No hay un fallo publicado con esta dirección, o todavía no está visible para el público. Si
+            acabás de crearlo, revisá en el panel que tenga <strong>Publicado</strong> activado.
+          </p>
+          <Button asChild>
+            <Link href="/fallos">Volver a Fallos</Link>
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -120,21 +134,38 @@ export default function RulingDetailPage() {
 
           <p className="lead text-lg font-medium text-foreground">{ruling.summary}</p>
 
-          {ruling.pdfUrl && (
-            <div className="not-prose mt-8 rounded-lg border bg-muted/30 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-sm text-muted-foreground m-0">
-                Descargue la sentencia o resolución en el formato original (PDF).
-              </p>
-              <Button variant="outline" size="sm" asChild className="shrink-0">
-                <a href={ruling.pdfUrl} target="_blank" rel="noopener noreferrer">
-                  <FileDown className="mr-2 h-4 w-4" />
-                  Descargar PDF
+          {ruling.pdfUrl ? (
+            <div className="mt-10 not-prose space-y-4">
+              <div className="rounded-xl border border-border/80 bg-muted/20 shadow-inner overflow-hidden">
+                <iframe
+                  title={ruling.pdfFileName ?? 'Fallo en PDF'}
+                  src={`${ruling.pdfUrl}#view=FitH`}
+                  className="w-full min-h-[65vh] h-[70vh] md:min-h-[72vh] md:h-[78vh] bg-background"
+                  loading="lazy"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                <a
+                  href={ruling.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-medium underline-offset-4 hover:underline inline-flex items-center justify-center gap-2"
+                >
+                  <FileDown className="h-4 w-4 shrink-0" />
+                  Abrir el PDF en otra pestaña
                 </a>
-              </Button>
+                {ruling.pdfFileName ? (
+                  <span className="block mt-1 truncate" title={ruling.pdfFileName}>
+                    {ruling.pdfFileName}
+                  </span>
+                ) : null}
+              </p>
             </div>
-          )}
+          ) : null}
 
-          <div className="whitespace-pre-wrap mt-8">{ruling.content}</div>
+          {ruling.content?.trim() ? (
+            <div className="whitespace-pre-wrap mt-8 not-prose">{ruling.content}</div>
+          ) : null}
         </article>
 
         <div className="mt-12 text-center">

@@ -2,15 +2,16 @@ import { ProblemPageLayout } from '@/components/problem-page-layout';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Defensa en Secuestro Prendario de Plan de Ahorro',
-  description: '¿Recibió una intimación por secuestro prendario? Actúe rápido. Le ofrecemos la mejor defensa para proteger su vehículo y sus derechos.',
+  title: 'Defensa en Ejecución Prendaria — Plan de Ahorro',
+  description:
+    '¿Recibió una intimación o enfrenta una ejecución prendaria? Actúe rápido. Le ofrecemos la mejor defensa para proteger su vehículo y sus derechos.',
 };
 
 export default function SecuestroPrendarioPage() {
   return (
-    <ProblemPageLayout title="Secuestro Prendario">
+    <ProblemPageLayout title="Ejecución Prendaria">
       <p>
-        El secuestro prendario es la acción judicial más agresiva que puede iniciar una administradora de plan de ahorro. Se utiliza cuando un suscriptor que ya tiene el vehículo deja de pagar las cuotas. El objetivo de la administradora es recuperar el auto para venderlo y saldar la deuda.
+        La ejecución prendaria es la acción judicial más agresiva que puede iniciar una administradora de plan de ahorro cuando un suscriptor que ya tiene el vehículo deja de pagar las cuotas. Suele incluir el secuestro del bien: el objetivo de la administradora es recuperar el auto para venderlo y saldar la deuda.
       </p>
       <p>
         Es un proceso muy rápido y, si no se actúa a tiempo, puede resultar en la pérdida de su vehículo en cuestión de semanas.
@@ -27,7 +28,7 @@ export default function SecuestroPrendarioPage() {
 
       <h2 className='font-headline'>¡Usted tiene defensas!</h2>
       <p>
-        Aunque el proceso es rápido, no significa que usted esté indefenso. Existen numerosas estrategias legales para frenar el secuestro y proteger sus derechos:
+        Aunque el proceso es rápido, no significa que usted esté indefenso. Existen numerosas estrategias legales para frenar la ejecución o el secuestro y proteger sus derechos:
       </p>
       <ul>
         <li><strong>Nulidad de la intimación:</strong> Si la intimación de pago no cumple con los requisitos legales, todo el proceso posterior puede ser nulo.</li>

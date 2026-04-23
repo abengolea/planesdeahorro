@@ -41,7 +41,8 @@ export type CaseEvalSpeechOptions = {
 export function useCaseEvalSpeech(setInput: SetInput, options?: CaseEvalSpeechOptions) {
   const validateSpokenRef = useRef(options?.validateSpoken);
   validateSpokenRef.current = options?.validateSpoken;
-  const [isSupported] = useState(() => getSpeechRecognitionCtor() !== null);
+  /** `false` en SSR y en el primer paint del cliente para evitar mismatch de hidratación; se actualiza en el cliente. */
+  const [isSupported, setIsSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [remainingSec, setRemainingSec] = useState(CASE_EVAL_MAX_VOICE_SECONDS);
   const [speechError, setSpeechError] = useState<string | null>(null);
@@ -90,6 +91,10 @@ export function useCaseEvalSpeech(setInput: SetInput, options?: CaseEvalSpeechOp
     setIsListening(false);
     setRemainingSec(CASE_EVAL_MAX_VOICE_SECONDS);
   }, [clearTick]);
+
+  useEffect(() => {
+    setIsSupported(getSpeechRecognitionCtor() !== null);
+  }, []);
 
   useEffect(() => {
     return () => {

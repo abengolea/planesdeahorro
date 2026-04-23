@@ -6,11 +6,14 @@
     "dev": "next dev --turbopack -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "NODE_ENV=production next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "grant-admin": "tsx scripts/grant-admin.ts"
+    "grant-admin": "tsx scripts/grant-admin.ts",
+    "test-resend": "tsx scripts/test-resend.ts",
+    "test-notificashub-send": "tsx scripts/test-notificashub-send.ts",
+    "check-notificashub-env": "tsx scripts/check-notificashub-env.ts"
   },
   "dependencies": {
     "@genkit-ai/compat-oai": "^1.32.0",

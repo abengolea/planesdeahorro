@@ -53,13 +53,13 @@ export default function AdminDashboardPage() {
   return (
     <div className="p-6 md:p-10 max-w-5xl">
       <div className="mb-10 border-b border-border pb-8">
-        <p className="text-xs font-medium tracking-[0.25em] uppercase text-accent mb-2">
+        <p className="text-sm font-medium tracking-[0.25em] uppercase text-accent mb-2">
           Panel de control
         </p>
         <h1 className="font-headline text-3xl md:text-4xl font-bold text-primary">
           Panel de Administración
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-lg text-muted-foreground mt-2">
           Gestioná el contenido y revisá las consultas recibidas por la web.
         </p>
       </div>
@@ -76,11 +76,11 @@ export default function AdminDashboardPage() {
               <div className="w-10 h-10 border border-primary/20 flex items-center justify-center mb-5">
                 <Icon className="w-4 h-4 text-primary" />
               </div>
-              <h2 className="font-headline text-xl font-bold text-foreground mb-2">{card.title}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed flex-grow">
+              <h2 className="font-headline text-2xl font-bold text-foreground mb-2">{card.title}</h2>
+              <p className="text-base text-muted-foreground leading-relaxed flex-grow">
                 {card.description}
               </p>
-              <div className="mt-6 flex items-center text-primary text-sm font-semibold gap-1.5 group-hover:gap-3 transition-all">
+              <div className="mt-6 flex items-center text-primary text-base font-semibold gap-1.5 group-hover:gap-3 transition-all">
                 {card.cta} <ArrowRight className="h-4 w-4" />
               </div>
             </Link>

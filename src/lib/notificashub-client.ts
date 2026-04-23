@@ -4,8 +4,13 @@
  * Variables:
  * - NOTIFICASHUB_URL: base pública del hub (sin trailing slash), ej. https://notificas.example.com
  * - NOTIFICASHUB_TENANT_ID: id del tenant en Firestore del hub (ej. planesdeahorro)
+ * - NOTIFICASHUB_INBOUND_AUTH_HEADER (opcional): nombre del header si el tenant usa internalAuthHeader en el hub (default x-internal-token)
  * El token debe ser el internalSecret de ese tenant (mismo valor que valida el inbound acá).
  */
+export function notificasHubAuthHeaderName(): string {
+  return process.env.NOTIFICASHUB_INBOUND_AUTH_HEADER?.trim() || 'x-internal-token';
+}
+
 export async function sendTextViaNotificasHub(params: {
   to: string;
   text: string;
@@ -19,11 +24,12 @@ export async function sendTextViaNotificasHub(params: {
   }
 
   const url = `${base}/api/whatsapp/send`;
+  const authHeader = notificasHubAuthHeaderName();
   const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-internal-token': params.internalSecret,
+      [authHeader]: params.internalSecret,
     },
     body: JSON.stringify({
       to: params.to,

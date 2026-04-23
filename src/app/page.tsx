@@ -15,9 +15,16 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const homeFaqs = faqHomeItems.length > 0 ? faqHomeItems : faqs.slice(0, 4);
 
+/** Solo mostrar el contador de consultas en portada cuando sea ≥ este número */
+const CONSULTAS_ATENDIDAS_MIN_PARA_MOSTRAR = 50;
+/** Actualizar cuando quieras publicar el dato en la franja de estadísticas */
+const consultasAtendidas = 0;
+
 const stats = [
-  { value: '+10', label: 'Años de experiencia' },
-  { value: '+500', label: 'Consultas atendidas' },
+  { value: '+15', label: 'Más de 15 años de experiencia' },
+  ...(consultasAtendidas >= CONSULTAS_ATENDIDAS_MIN_PARA_MOSTRAR
+    ? [{ value: `+${consultasAtendidas}`, label: 'Consultas atendidas' }]
+    : []),
   { value: 'PBA', label: 'Provincia de Buenos Aires' },
   { value: '01', label: 'Contanos tu caso' },
 ];
@@ -93,7 +100,7 @@ export default function Home() {
               asChild
               size="lg"
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10 hover:text-white h-12 text-base"
+              className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white h-12 text-base"
             >
               <Link href="#problemas">Ver Problemas Frecuentes</Link>
             </Button>
@@ -104,7 +111,9 @@ export default function Home() {
       {/* ── Stats strip ── */}
       <div className="bg-background border-b">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border">
+          <div
+            className={`grid grid-cols-2 divide-x divide-border ${stats.length >= 4 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}
+          >
             {stats.map((stat) => (
               <div key={stat.label} className="py-8 px-6 text-center">
                 <p className="font-headline text-3xl md:text-4xl font-bold text-primary">

@@ -17,6 +17,7 @@ import { Bot, LayoutDashboard, FileText, Gavel, ClipboardList } from 'lucide-rea
 import { Logo } from '@/components/logo';
 import { AdminAuthGate } from '@/app/admin/admin-auth-gate';
 import { Button } from '@/components/ui/button';
+import { AdminCaseNotificationsBell } from '@/components/admin-case-notifications-bell';
 
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -39,7 +40,10 @@ function AdminSidebarShell({ children }: { children: React.ReactNode }) {
             <Link href="/admin">
               <Logo inverted />
             </Link>
-            <SidebarTrigger />
+            <div className="flex items-center gap-1">
+              <AdminCaseNotificationsBell />
+              <SidebarTrigger />
+            </div>
           </div>
           {user && (
             <div className="mt-3 flex flex-col gap-2 border-t pt-3">
@@ -88,8 +92,10 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AdminAuthGate>
-      <AdminSidebarShell>{children}</AdminSidebarShell>
-    </AdminAuthGate>
+    <div className="font-headline min-h-svh">
+      <AdminAuthGate>
+        <AdminSidebarShell>{children}</AdminSidebarShell>
+      </AdminAuthGate>
+    </div>
   );
 }

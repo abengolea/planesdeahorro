@@ -10,8 +10,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['EB Garamond', 'serif'],
+        body: ['var(--font-inter)', 'sans-serif'],
+        headline: ['var(--font-eb-garamond)', 'serif'],
         code: ['monospace'],
       },
       colors: {

@@ -35,7 +35,7 @@ export default function RulingsPage() {
     );
   }, [firestore]);
 
-  const { data: fallos, isLoading } = useCollection<Fallo>(fallosQuery);
+  const { data: fallos, isLoading, error } = useCollection<Fallo>(fallosQuery);
 
   return (
     <div className="flex flex-col">
@@ -60,8 +60,24 @@ export default function RulingsPage() {
       <div className="bg-background py-14 md:py-20">
         <div className="container mx-auto px-4">
 
+          {error && (
+            <div className="border border-destructive/30 bg-destructive/5 p-8 text-center rounded-sm">
+              <h3 className="font-headline text-lg font-bold text-foreground mb-2">
+                No se pudo cargar el listado
+              </h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Si el mensaje abajo menciona un índice, ejecutá el deploy de índices de Firestore
+                o seguí el enlace que muestre Firebase. Los índices nuevos pueden tardar unos
+                minutos.
+              </p>
+              <p className="text-xs font-mono text-destructive break-all text-left">
+                {String(error.message)}
+              </p>
+            </div>
+          )}
+
           {/* Loading */}
-          {isLoading && (
+          {!error && isLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border">
               <FalloCardSkeleton />
               <FalloCardSkeleton />
@@ -70,7 +86,7 @@ export default function RulingsPage() {
           )}
 
           {/* Results */}
-          {!isLoading && fallos && fallos.length > 0 && (
+          {!error && !isLoading && fallos && fallos.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border">
               {fallos.map((ruling) => (
                 <Link
@@ -105,7 +121,7 @@ export default function RulingsPage() {
           )}
 
           {/* Empty state */}
-          {!isLoading && (!fallos || fallos.length === 0) && (
+          {!error && !isLoading && (!fallos || fallos.length === 0) && (
             <div className="border border-border bg-card p-16 text-center">
               <Gavel className="mx-auto h-10 w-10 text-muted-foreground/40 mb-4" />
               <h3 className="font-headline text-xl font-bold text-foreground mb-2">

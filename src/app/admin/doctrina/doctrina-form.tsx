@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
@@ -119,8 +119,8 @@ export function DoctrinaForm({ initialData }: DoctrinaFormProps) {
   const [isDeleting, startDeleting] = useTransition();
   const [isPdfAnalyzing, startPdfAnalyzing] = useTransition();
 
-  const form = useForm<DoctrinaFormInput>({
-    resolver: zodResolver(doctrinaSchema),
+  const form = useForm<DoctrinaFormInput, unknown, DoctrinaFormValues>({
+    resolver: zodResolver(doctrinaSchema) as unknown as Resolver<DoctrinaFormInput>,
     defaultValues: initialData
       ? {
           ...initialData,
@@ -596,7 +596,7 @@ export function DoctrinaForm({ initialData }: DoctrinaFormProps) {
                               )}
                             >
                               {field.value ? (
-                                format(field.value, 'PPP', { timeZone: 'UTC' })
+                                format(field.value, 'PPP')
                               ) : (
                                 <span>Elegir fecha</span>
                               )}

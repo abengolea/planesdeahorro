@@ -31,8 +31,14 @@ if (plugins.length === 0) {
   plugins.push(googleAI());
 }
 
-/** Con clave de OpenAI y sin `LLM_PROVIDER=google`, usamos OpenAI (útil si Gemini tiene cuota/facturación bloqueada). */
-const useOpenAI = Boolean(openaiApiKey) && process.env.LLM_PROVIDER !== 'google';
+const hasGoogleKey = Boolean(googleApiKey);
+/**
+ * Modelo por defecto del `ai` global: con clave Gemini se usa Google; OpenAI solo si no hay clave Google
+ * o si `LLM_PROVIDER=openai` (misma regla que `useOpenAiAsPrimaryLlm` en `llm-fallback.ts`).
+ */
+const useOpenAI =
+  Boolean(openaiApiKey) &&
+  (!hasGoogleKey || process.env.LLM_PROVIDER?.trim().toLowerCase() === 'openai');
 
 const openaiModelId = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 /** `gemini-2.0-flash` dejó de estar disponible para cuentas/claves nuevas en la API pública. Override: `GEMINI_MODEL`. */

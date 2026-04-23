@@ -1,30 +1,39 @@
 'use server';
 import { Resend } from 'resend';
 import type { CaseEvaluation } from '@/lib/types';
+import {
+  EMAIL_THEME,
+  emailIntroHeading,
+  emailKeyValueRows,
+  emailParagraph,
+  emailSectionTitle,
+  escapeHtml,
+  wrapEmailHtml,
+} from '@/lib/email-layout';
+import { getPublicAppUrl } from '@/lib/public-app-url';
 
 // Configura RESEND_API_KEY en `.env.local` para enviar correos. Sin clave, el envío se omite sin romper la app.
-const TO_EMAIL = 'abengolea1@gmail.com';
+/** Aviso de nueva evaluación de caso (siempre a esta bandeja). */
+const NEW_CASE_INTERNAL_EMAIL = 'abengolea1@gmail.com';
+
 const FROM_EMAIL = 'onboarding@resend.dev'; // Resend requiere un dominio verificado. `onboarding@resend.dev` es para pruebas.
+
 /** Remitente para mails al cliente (dominio verificado en Resend). Si no se define, se usa FROM_EMAIL. */
 function clientFromEmail(): string {
   return (process.env.RESEND_CLIENT_FROM ?? process.env.RESEND_FROM_EMAIL ?? FROM_EMAIL).trim();
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+const p =
+  'margin:0 0 14px;font-family:\'Inter\',-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;font-size:15px;line-height:1.6;color:' +
+  EMAIL_THEME.body;
 
 function plainToParagraphs(text: string | undefined): string {
   if (!text?.trim()) return '';
   return text
     .split(/\n+/)
-    .map((p) => p.trim())
+    .map((line) => line.trim())
     .filter(Boolean)
-    .map((p) => `<p>${escapeHtml(p)}</p>`)
+    .map((line) => `<p style="${p}">${escapeHtml(line)}</p>`)
     .join('');
 }
 
@@ -39,6 +48,8 @@ export async function sendClientCaseUpdateEmail(options: {
   kind: ClientCaseEmailKind;
   /** Texto plano del admin; se escapa y convierte en párrafos HTML. */
   messageFromAdmin?: string;
+  /** Enlace para activar el área de cliente (típico al aceptar el caso). */
+  portalActivationUrl?: string;
 }): Promise<{ success: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -58,55 +69,59 @@ export async function sendClientCaseUpdateEmail(options: {
     case 'en_analisis':
       subject = 'Dr. Adrián Bengolea — Estamos revisando tu consulta';
       coreHtml = `
-        <p>Hola ${safeName},</p>
-        <p>Te confirmamos que recibimos los datos de tu consulta y el equipo está revisando tu caso.</p>
-        <p>Te contactaremos por este correo o por el medio que indicaste cuando haya novedades.</p>
+        <p style="${p}">Hola ${safeName},</p>
+        <p style="${p}">Te confirmamos que recibimos los datos de tu consulta y el equipo está revisando tu caso.</p>
+        <p style="${p}">Te contactaremos por este correo o por el medio que indicaste cuando haya novedades.</p>
       `;
       break;
     case 'aceptado':
       subject = 'Dr. Adrián Bengolea — Próximos pasos en tu consulta';
       coreHtml = `
-        <p>Hola ${safeName},</p>
-        <p>Gracias por la información enviada. Podemos avanzar con el siguiente paso respecto de tu consulta.</p>
+        <p style="${p}">Hola ${safeName},</p>
+        <p style="${p}">Gracias por la información enviada. Podemos avanzar con el siguiente paso respecto de tu consulta.</p>
       `;
       break;
     case 'rechazado':
       subject = 'Dr. Adrián Bengolea — Actualización sobre tu consulta';
       coreHtml = `
-        <p>Hola ${safeName},</p>
-        <p>Te agradecemos el contacto. A continuación te detallamos la respuesta del estudio:</p>
+        <p style="${p}">Hola ${safeName},</p>
+        <p style="${p}">Te agradecemos el contacto. A continuación te detallamos la respuesta del estudio:</p>
       `;
       break;
     case 'derivado':
       subject = 'Dr. Adrián Bengolea — Información sobre tu consulta';
       coreHtml = `
-        <p>Hola ${safeName},</p>
-        <p>Te compartimos la siguiente información respecto de tu consulta:</p>
+        <p style="${p}">Hola ${safeName},</p>
+        <p style="${p}">Te compartimos la siguiente información respecto de tu consulta:</p>
       `;
       break;
     case 'cerrado':
       subject = 'Dr. Adrián Bengolea — Cierre de tu consulta';
       coreHtml = `
-        <p>Hola ${safeName},</p>
-        <p>Damos por finalizada la gestión inicial vinculada a tu consulta en este canal.</p>
+        <p style="${p}">Hola ${safeName},</p>
+        <p style="${p}">Damos por finalizada la gestión inicial vinculada a tu consulta en este canal.</p>
       `;
       break;
   }
 
-  const footer = `
-    <p style="margin-top:24px;font-size:12px;color:#666;">
-      Este mensaje es informativo y no constituye asesoramiento jurídico sin un contrato de prestación de servicios.
-    </p>
-  `;
+  const portalUrl = options.portalActivationUrl?.trim();
+  const portalBlock =
+    portalUrl && options.kind === 'aceptado'
+      ? `<p style="${p}"><strong>Portal del cliente:</strong> podés <a href="${escapeHtml(portalUrl)}" style="color:${EMAIL_THEME.primary};text-decoration:underline;">activar tu acceso en la web</a> para ver el estado, subir documentación y los movimientos del expediente. Usá el mismo correo con el que enviaste la consulta.</p>`
+      : '';
 
-  const body = `<div style="font-family:sans-serif;line-height:1.5;color:#111;">${coreHtml}${extraHtml}${footer}</div>`;
+  const inner = `${coreHtml}${portalBlock}${extraHtml}`;
+  const html = wrapEmailHtml(inner, {
+    variant: 'client',
+    preheader: subject,
+  });
 
   try {
     const { data, error } = await resend.emails.send({
       from: `Dr. Adrián Bengolea <${from}>`,
       to: [options.to.trim()],
       subject,
-      html: body,
+      html,
     });
 
     if (error) {
@@ -122,7 +137,56 @@ export async function sendClientCaseUpdateEmail(options: {
   }
 }
 
-export async function sendCaseEvaluationEmail(caseData: CaseEvaluation) {
+function caseEvaluationNotificationHtml(
+  caseData: CaseEvaluation,
+  options: { openInAdminUrl?: string } = {},
+): string {
+  const docs = caseData.documentacionDisponible.join(', ') || '—';
+  const cta = options.openInAdminUrl
+    ? `
+    <p style="margin:0 0 18px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.6;color:${EMAIL_THEME.body};">
+      <a href="${escapeHtml(options.openInAdminUrl)}" style="display:inline-block;padding:10px 18px;background:${EMAIL_THEME.primary};color:${EMAIL_THEME.primaryFg};text-decoration:none;border-radius:6px;font-weight:600;">Abrir en el panel de administración</a>
+    </p>
+  `
+    : '';
+
+  return `
+    ${emailIntroHeading('Nueva evaluación de caso')}
+    ${emailParagraph('Se recibió una consulta a través del asistente de evaluación. A continuación, el detalle registrado.')}
+    ${cta}
+    ${emailSectionTitle('Datos del contacto')}
+    ${emailKeyValueRows([
+      { label: 'Nombre', value: caseData.nombre },
+      { label: 'WhatsApp', value: caseData.whatsapp },
+      { label: 'Email', value: caseData.email },
+      { label: 'Ciudad / Provincia', value: `${caseData.ciudad}, ${caseData.provincia}` },
+    ])}
+    ${emailSectionTitle('Datos del plan')}
+    ${emailKeyValueRows([
+      { label: 'Administradora', value: caseData.administradora },
+      { label: 'Estado del plan', value: caseData.estadoPlan },
+      { label: 'Adjudicado', value: caseData.adjudicado },
+      { label: 'Vehículo recibido', value: caseData.vehiculoRecibido },
+      { label: 'Grupo y orden', value: caseData.grupoOrden || 'No especificado' },
+    ])}
+    ${emailSectionTitle('Resumen del caso')}
+    ${emailKeyValueRows([{ label: 'Problema principal', value: caseData.problemaPrincipal }])}
+    ${emailParagraph(caseData.resumenHechos)}
+    ${emailSectionTitle('Análisis automático (IA)')}
+    ${emailKeyValueRows([
+      { label: 'Nivel de urgencia', value: caseData.urgencia },
+      { label: 'Motivo de urgencia', value: caseData.motivoUrgencia || 'N/A' },
+      { label: 'Documentación disponible', value: docs },
+      { label: 'Posible categoría jurídica', value: caseData.posibleCategoriaJuridica },
+      { label: 'Próxima acción sugerida', value: caseData.proximaAccionSugerida },
+    ])}
+  `;
+}
+
+export async function sendCaseEvaluationEmail(
+  caseData: CaseEvaluation,
+  options?: { evaluationId?: string },
+) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn(
@@ -132,58 +196,34 @@ export async function sendCaseEvaluationEmail(caseData: CaseEvaluation) {
   }
 
   const resend = new Resend(apiKey);
+  const from = clientFromEmail();
+  const to = [NEW_CASE_INTERNAL_EMAIL];
   const subject = `Nueva evaluación de caso – Plan de ahorro – ${caseData.nombre} – ${caseData.administradora}`;
 
-  const body = `
-    <h1>Nueva Evaluación de Caso Recibida</h1>
-    <p>Se ha recibido una nueva consulta a través del asistente de evaluación del Dr. Adrián Bengolea.</p>
-    
-    <h2>Datos del Cliente</h2>
-    <ul>
-      <li><strong>Nombre:</strong> ${caseData.nombre}</li>
-      <li><strong>WhatsApp:</strong> ${caseData.whatsapp}</li>
-      <li><strong>Email:</strong> ${caseData.email}</li>
-      <li><strong>Ciudad/Provincia:</strong> ${caseData.ciudad}, ${caseData.provincia}</li>
-    </ul>
+  const openInAdminUrl =
+    options?.evaluationId != null && String(options.evaluationId).length > 0
+      ? `${getPublicAppUrl()}/admin/evaluaciones-caso/${encodeURIComponent(String(options.evaluationId))}`
+      : undefined;
 
-    <h2>Datos del Plan</h2>
-    <ul>
-      <li><strong>Administradora:</strong> ${caseData.administradora}</li>
-      <li><strong>Estado del Plan:</strong> ${caseData.estadoPlan}</li>
-      <li><strong>Adjudicado:</strong> ${caseData.adjudicado}</li>
-      <li><strong>Vehículo Recibido:</strong> ${caseData.vehiculoRecibido}</li>
-      <li><strong>Grupo y Orden:</strong> ${caseData.grupoOrden || 'No especificado'}</li>
-    </ul>
-
-    <h2>Resumen del Caso</h2>
-    <ul>
-      <li><strong>Problema Principal:</strong> ${caseData.problemaPrincipal}</li>
-      <li><strong>Resumen de Hechos por IA:</strong>
-        <p>${caseData.resumenHechos}</p>
-      </li>
-    </ul>
-    
-    <h2>Análisis de IA</h2>
-    <ul>
-      <li><strong>Nivel de Urgencia:</strong> ${caseData.urgencia}</li>
-      <li><strong>Motivo de Urgencia:</strong> ${caseData.motivoUrgencia || 'N/A'}</li>
-      <li><strong>Documentación Disponible:</strong> ${caseData.documentacionDisponible.join(', ')}</li>
-      <li><strong>Posible Categoría Jurídica:</strong> ${caseData.posibleCategoriaJuridica}</li>
-      <li><strong>Próxima Acción Sugerida:</strong> ${caseData.proximaAccionSugerida}</li>
-    </ul>
-  `;
+  const inner = caseEvaluationNotificationHtml(caseData, { openInAdminUrl });
+  const html = wrapEmailHtml(inner, {
+    variant: 'internal',
+    preheader: `${caseData.nombre} · ${caseData.administradora}`,
+    showSignature: false,
+    footerNote:
+      'Correo generado automáticamente por el sistema del sitio. Reservado para uso del estudio.',
+  });
 
   try {
     const { data, error } = await resend.emails.send({
-      from: `Dr. Adrián Bengolea <${FROM_EMAIL}>`,
-      to: [TO_EMAIL],
+      from: `Dr. Adrián Bengolea <${from}>`,
+      to,
       subject: subject,
-      html: body,
+      html: html,
     });
 
     if (error) {
       console.error('Error sending email:', error);
-      // En un caso real, aquí podrías reintentar o notificar a un sistema de monitoreo.
       return { success: false, error: 'Failed to send email' };
     }
 

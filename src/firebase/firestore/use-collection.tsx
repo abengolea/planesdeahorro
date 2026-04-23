@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import {
   Query,
   onSnapshot,
@@ -58,19 +58,26 @@ export function useCollection<T = any>(
   type StateDataType = ResultItemType[] | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  /** Evita un primer frame con isLoading=false y data=null (p. ej. notFound() antes del primer snapshot). */
+  const [isLoading, setIsLoading] = useState<boolean>(() => Boolean(memoizedTargetRefOrQuery));
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!memoizedTargetRefOrQuery) {
       setData(null);
       setIsLoading(false);
       setError(null);
       return;
     }
-
+    setData(null);
     setIsLoading(true);
     setError(null);
+  }, [memoizedTargetRefOrQuery]);
+
+  useEffect(() => {
+    if (!memoizedTargetRefOrQuery) {
+      return;
+    }
 
     // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
     const unsubscribe = onSnapshot(

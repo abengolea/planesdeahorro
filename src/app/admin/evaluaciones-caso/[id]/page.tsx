@@ -2,12 +2,17 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser } from '@/firebase/provider';
+import { markCaseEvaluationViewed } from '@/actions/case-evaluation-admin';
 import { doc } from 'firebase/firestore';
 import type { CaseEvaluationSubmission } from '@/lib/types';
 import type { Timestamp } from 'firebase/firestore';
 import { formatCaseEvaluationStatus } from '@/lib/case-evaluation-status';
 import { CaseEvaluationActions } from '@/app/admin/evaluaciones-caso/[id]/case-actions';
+import { CaseEvaluationEditForm } from '@/app/admin/evaluaciones-caso/[id]/case-evaluation-edit-form';
+import { PortalChatThread } from '@/components/portal-chat-thread';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +55,8 @@ export default function EvaluacionCasoDetallePage() {
   const params = useParams();
   const id = params.id as string;
   const firestore = useFirestore();
+  const { user } = useUser();
+  const markViewedAttemptForId = useRef<string | null>(null);
 
   const docRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
@@ -57,6 +64,28 @@ export default function EvaluacionCasoDetallePage() {
   }, [firestore, id]);
 
   const { data: row, isLoading, error } = useDoc<CaseEvaluationSubmission>(docRef);
+
+  useEffect(() => {
+    if (!row || isLoading) return;
+    if (typeof window === 'undefined' || window.location.hash !== '#editar-datos') return;
+    requestAnimationFrame(() => {
+      document.getElementById('editar-datos')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [row, isLoading]);
+
+  useEffect(() => {
+    if (!row?.id || !user || row.newForAdmin !== true) return;
+    if (markViewedAttemptForId.current === row.id) return;
+    markViewedAttemptForId.current = row.id;
+    const caseId = row.id;
+    void (async () => {
+      const token = await user.getIdToken();
+      const res = await markCaseEvaluationViewed(token, caseId);
+      if (!res.ok && markViewedAttemptForId.current === caseId) {
+        markViewedAttemptForId.current = null;
+      }
+    })();
+  }, [row?.id, row?.newForAdmin, user]);
 
   return (
     <div className="p-4 md:p-8">
@@ -92,13 +121,13 @@ export default function EvaluacionCasoDetallePage() {
           <>
             <div>
               <h1 className="font-headline text-3xl md:text-4xl text-primary">Evaluación de caso</h1>
-              <div className="text-muted-foreground mt-1">
-                Recibida el {formatCreatedAt(row.createdAt)}
-                {row.status ? (
-                  <>
-                    {' · '}
-                    <Badge variant="outline">{formatCaseEvaluationStatus(row.status)}</Badge>
-                  </>
+              <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2">
+                <span>Recibida el {formatCreatedAt(row.createdAt)}</span>
+                {row.status ? <Badge variant="outline">{formatCaseEvaluationStatus(row.status)}</Badge> : null}
+                {row.archived ? (
+                  <Badge variant="secondary" className="border-dashed">
+                    Archivado
+                  </Badge>
                 ) : null}
               </div>
               <p className="text-xs text-muted-foreground mt-2 font-mono">ID: {row.id}</p>
@@ -116,6 +145,33 @@ export default function EvaluacionCasoDetallePage() {
                 <Field label="Ubicación">
                   {[row.ciudad, row.provincia].filter(Boolean).join(', ') || '—'}
                 </Field>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Portal del cliente</CardTitle>
+                <CardDescription>
+                  Acceso web a movimientos y documentación (tras aceptar el caso y enviar el correo con enlace).
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                {row.clientPortalUid ? (
+                  <>
+                    <p>
+                      <span className="text-muted-foreground">Cuenta vinculada (UID):</span>{' '}
+                      <span className="font-mono text-xs break-all">{row.clientPortalUid}</span>
+                    </p>
+                    <p className="text-muted-foreground">
+                      Vinculado el {formatCreatedAt(row.clientPortalLinkedAt)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Aún no activó el portal. Al marcar el caso como aceptado y enviar el correo, recibe un enlace
+                    a <span className="font-mono text-xs">/mi-caso/activar</span>.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -176,6 +232,10 @@ export default function EvaluacionCasoDetallePage() {
                 </Field>
               </CardContent>
             </Card>
+
+            <CaseEvaluationEditForm row={row} />
+
+            <PortalChatThread caseId={id} viewer="admin" />
 
             <CaseEvaluationActions evaluationId={row.id} row={row} />
           </>

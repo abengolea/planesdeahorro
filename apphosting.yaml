@@ -9,8 +9,37 @@ runConfig:
 # Genkit (`src/ai/genkit.ts`) usa GEMINI_API_KEY, GOOGLE_API_KEY o GOOGLE_GENAI_API_KEY en runtime.
 # Crear el secreto antes del próximo rollout: `firebase apphosting:secrets:set GEMINI_API_KEY`
 # (o definir la variable en consola: App Hosting → tu backend → Settings → Environment).
+#
+# Opcional: `OPENAI_API_KEY` + modelos (`OPENAI_MODEL`, `OPENAI_MODEL_FALLBACKS`): con Gemini + OpenAI,
+# el principal es Gemini y OpenAI entra como respaldo ante 503 (`LLM_CROSS_PROVIDER_FALLBACK=0` lo apaga).
+# Para priorizar OpenAI: `LLM_PROVIDER=openai`.
+# Modelos Gemini: `GEMINI_MODEL`, `GEMINI_MODEL_FALLBACKS` (lista separada por comas).
 env:
   - variable: GEMINI_API_KEY
     secret: GEMINI_API_KEY
+    availability:
+      - RUNTIME
+  # OpenAI (Genkit). Crear: `firebase apphosting:secrets:set OPENAI_API_KEY`
+  - variable: OPENAI_API_KEY
+    secret: OPENAI_API_KEY
+    availability:
+      - RUNTIME
+  # Resend (`src/lib/send-email.ts`). Crear: `firebase apphosting:secrets:set RESEND_API_KEY`
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+    availability:
+      - RUNTIME
+  # NotificasHub (`src/lib/notificashub-client.ts`, `src/app/api/whatsapp/incoming/route.ts`).
+  # URL base del hub sin barra final. Secretos: `firebase apphosting:secrets:set NOTIFICASHUB_URL` y `... INBOUND_SECRET`
+  - variable: NOTIFICASHUB_TENANT_ID
+    value: planesdeahorro
+    availability:
+      - RUNTIME
+  - variable: NOTIFICASHUB_URL
+    secret: NOTIFICASHUB_URL
+    availability:
+      - RUNTIME
+  - variable: NOTIFICASHUB_INBOUND_SECRET
+    secret: NOTIFICASHUB_INBOUND_SECRET
     availability:
       - RUNTIME

@@ -1,12 +1,12 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, deleteField, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
-import { useFirestore, useAuth } from '@/firebase';
+import { useFirestore, useAuth, useUser } from '@/firebase';
 import { deleteFalloPdfAdminAction, uploadFalloPdfAdminAction } from '@/actions/fallo-storage-actions';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -17,14 +17,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Fallo } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import React, { useRef, useState, useTransition } from 'react';
-import { CalendarIcon, FileDown, FileUp, Loader2, Sparkles, Trash } from 'lucide-react';
+import { CalendarIcon, FileDown, FileUp, Loader2, Trash } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { analyzeFalloPdfAction, summarizeRulingAction } from '@/actions/ai-actions';
+import { analyzeFalloPdfAction } from '@/actions/ai-actions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
@@ -63,12 +63,14 @@ const falloSchema = z.object({
   summary: z.string().min(20, 'El resumen debe tener al menos 20 caracteres.'),
   tribunal: z.string().min(5, 'El nombre del tribunal es muy corto.'),
   date: z.date({ required_error: 'La fecha es obligatoria.' }),
-  content: z.string().min(50, 'El contenido debe tener al menos 50 caracteres.'),
+  /** Sin mínimo en esquema: con PDF adjunto podés dejarlo vacío; sin PDF se valida al guardar. */
+  content: z.string().max(500_000, 'El texto es demasiado largo.'),
   published: z.boolean().default(false),
   tags: z.string().transform(val => val.split(',').map(tag => tag.trim()).filter(Boolean)),
 });
 
-type FalloFormValues = z.infer<typeof falloSchema>;
+type FalloFormInput = z.input<typeof falloSchema>;
+type FalloFormValues = z.output<typeof falloSchema>;
 
 interface FalloFormProps {
   initialData?: Fallo;
@@ -89,18 +91,19 @@ export function FalloForm({ initialData }: FalloFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user } = useUser();
   const auth = useAuth();
   const [removePdf, setRemovePdf] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleting] = useTransition();
-  const [isAnalyzing, startAnalyzing] = useTransition();
   const [isPdfAnalyzing, startPdfAnalyzing] = useTransition();
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<FalloFormValues>({
-    resolver: zodResolver(falloSchema),
+  const form = useForm<FalloFormInput, unknown, FalloFormValues>({
+    resolver: zodResolver(falloSchema) as unknown as Resolver<FalloFormInput>,
     defaultValues: initialData ? {
         ...initialData,
+        title: initialData.title.toLocaleUpperCase('es-AR'),
         date: new Date(initialData.date),
         tags: initialData.tags.join(', '),
     } : {
@@ -121,45 +124,6 @@ export function FalloForm({ initialData }: FalloFormProps) {
       form.setValue('slug', slugify(title), { shouldValidate: true });
     }
   }, [title, form, initialData]);
-
-  const handleAnalyzeContent = () => {
-    const content = form.getValues('content');
-    if (!content || content.length < 50) {
-      toast({
-        variant: 'destructive',
-        title: 'Contenido insuficiente',
-        description: 'Por favor, ingrese el contenido completo del fallo (mínimo 50 caracteres) antes de analizarlo.',
-      });
-      return;
-    }
-    startAnalyzing(async () => {
-      const result = await summarizeRulingAction({ rulingText: content });
-      
-      if (result.error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error de IA',
-          description: result.error,
-        });
-      } else if (result.data) {
-        const d = result.data;
-        form.setValue('summary', d.summary, { shouldValidate: true });
-        form.setValue('tags', d.tags.join(', '), { shouldValidate: true });
-        const titleVal = d.suggestedTitle?.trim();
-        if (titleVal && (!initialData || !form.getValues('title')?.trim())) {
-          form.setValue('title', titleVal, { shouldValidate: true });
-        }
-        const tribunalVal = d.suggestedTribunal?.trim();
-        if (tribunalVal && (!initialData || !form.getValues('tribunal')?.trim())) {
-          form.setValue('tribunal', tribunalVal, { shouldValidate: true });
-        }
-        toast({
-          title: 'Análisis completado',
-          description: 'Se generaron el resumen y las etiquetas con IA.',
-        });
-      }
-    });
-  };
 
   const handleAnalyzePdf = () => {
     const file = pdfInputRef.current?.files?.[0];
@@ -203,21 +167,42 @@ export function FalloForm({ initialData }: FalloFormProps) {
       }
       toast({
         title: 'PDF analizado',
-        description: `Se extrajo el texto de “${d.fileName}” y la IA completó resumen y etiquetas.`,
+        description: `Se generó resumen, etiquetas y texto a partir de “${d.fileName}”. Guardá el fallo para publicar el PDF en el sitio.`,
       });
     });
   };
 
   const onSubmit = (values: FalloFormValues) => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Sesión requerida',
+        description: 'Debés iniciar sesión para guardar el fallo.',
+      });
+      return;
+    }
+
+    const file = pdfInputRef.current?.files?.[0];
+    const hasNewPdf = !!(file && file.size > 0);
+    const hasExistingPdf = !!initialData?.pdfUrl && !removePdf;
+    const willHavePdfAfterSave = hasNewPdf || hasExistingPdf;
+
+    if (!willHavePdfAfterSave && values.content.trim().length < 50) {
+      toast({
+        variant: 'destructive',
+        title: 'Falta contenido o PDF',
+        description:
+          'Sin archivo PDF, el texto del fallo debe tener al menos 50 caracteres. Si solo querés publicar el PDF, subilo y guardá (el cuerpo puede quedar vacío).',
+      });
+      return;
+    }
+
     startTransition(async () => {
       try {
         const dataToSave = {
           ...values,
           date: values.date.toISOString(), // Store date as ISO string
         };
-
-        const file = pdfInputRef.current?.files?.[0];
-        const hasNewPdf = !!(file && file.size > 0);
 
         if (hasNewPdf && file!.size > PDF_MAX_BYTES) {
           toast({
@@ -357,16 +342,17 @@ export function FalloForm({ initialData }: FalloFormProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <Card>
-              <CardHeader><CardTitle>Contenido principal</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Contenido</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-lg border border-dashed bg-muted/30 p-4 space-y-3">
                   <div>
-                    <p className="text-sm font-medium">Fallo en PDF (recomendado)</p>
+                    <p className="text-sm font-medium">Documento en PDF (opcional)</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Subí el fallo en PDF: en el servidor se extrae el texto y la IA genera resumen, etiquetas y, si el
-                      documento lo permite, sugerencias de título y tribunal. Al <strong className="text-foreground">Guardar
-                      fallo</strong>, el mismo PDF se publica en almacenamiento y los visitantes pueden descargarlo desde la
-                      ficha del fallo.
+                      Subí un PDF del fallo: se extrae el texto en el servidor y la IA puede completar resumen, etiquetas y
+                      cuerpo (texto íntegro o depurado). Al <strong className="text-foreground">Guardar</strong>, el mismo PDF
+                      se publica y los visitantes lo ven embebido en la ficha.
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -382,19 +368,19 @@ export function FalloForm({ initialData }: FalloFormProps) {
                       type="button"
                       variant="secondary"
                       onClick={handleAnalyzePdf}
-                      disabled={isPdfAnalyzing || isAnalyzing}
+                      disabled={isPdfAnalyzing || isPending}
                     >
                       {isPdfAnalyzing ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <FileUp className="mr-2 h-4 w-4" />
                       )}
-                      Extraer texto y analizar con IA
+                      Extraer texto y generar con IA
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Tamaño máximo 12&nbsp;MB (análisis con IA y archivo en el sitio). Si el PDF es solo imagen escaneada sin
-                    texto, la extracción fallará: usá un PDF con texto seleccionable u OCR.
+                    Máximo 12&nbsp;MB. Si el PDF es solo imagen sin texto seleccionable, la extracción fallará: usá OCR o
+                    pegá el texto manualmente.
                   </p>
 
                   {initialData?.pdfUrl && (
@@ -432,40 +418,66 @@ export function FalloForm({ initialData }: FalloFormProps) {
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Título del Fallo</FormLabel>
-                      <FormControl><Input placeholder="Medida Cautelar Favorable por..." {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="content"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Texto completo del fallo</FormLabel>
-                      <FormControl><Textarea placeholder="Texto completo del fallo (se rellena automáticamente desde el PDF o pegalo acá)..." {...field} rows={15} /></FormControl>
-                       <FormDescription>
-                        Podés partir del PDF (arriba) o pegar el texto. Luego usá el botón de analizar con IA sobre este
-                        texto si querés regenerar solo resumen y etiquetas.
+                      <FormLabel>Título del fallo (carátula)</FormLabel>
+                      <FormControl>
+                        <Input
+                          className="font-medium tracking-tight"
+                          placeholder="CASTRO CINTIA DEL VALLE C/ SOCIEDAD ADMINISTRADORA S.A. S/ DAÑOS Y PERJUICIOS"
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          value={field.value}
+                          onChange={(e) =>
+                            field.onChange(e.target.value.toLocaleUpperCase('es-AR'))
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Usá MAYÚSCULAS como en el expediente judicial, para mantener el mismo criterio que el resto del
+                        sitio. El análisis por IA sugiere la carátula en mayúsculas.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                <Button type="button" variant="outline" onClick={handleAnalyzeContent} disabled={isAnalyzing || isPdfAnalyzing}>
-                  {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                  Analizar texto del cuadro con IA
-                </Button>
-
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Texto completo</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Opcional si subís un PDF: se rellena al extraer o pegá el fallo a mano."
+                          {...field}
+                          rows={16}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Si publicás un PDF arriba, podés dejar este campo vacío. Sin PDF, al guardar necesitás al menos 50
+                        caracteres de texto.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="summary"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Resumen</FormLabel>
-                      <FormControl><Textarea placeholder="Un resumen breve y conciso del fallo (generado con IA o manual)..." {...field} rows={4} /></FormControl>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Núcleo de lo decidido: qué resolvió el tribunal y con qué fundamento (ratio decidendi)…"
+                          {...field}
+                          rows={4}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Debe apuntar al criterio y al desenlace jurídico, no a un relato de hechos. Aparece en el listado
+                        público.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -484,18 +496,16 @@ export function FalloForm({ initialData }: FalloFormProps) {
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                         <div className="space-y-0.5">
                             <FormLabel>Publicado</FormLabel>
-                            <FormDescription>
-                            Define si el fallo es visible en el sitio público.
-                            </FormDescription>
+                            <FormDescription>Visible en /fallos para los visitantes.</FormDescription>
                         </div>
                         <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                         </FormItem>
                     )}
                     />
                     <div className="flex gap-2">
-                        <Button type="submit" disabled={isPending || isAnalyzing || isPdfAnalyzing} className="flex-1">
-                            {(isPending || isAnalyzing || isPdfAnalyzing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {initialData ? 'Actualizar Fallo' : 'Guardar Fallo'}
+                        <Button type="submit" disabled={isPending || isPdfAnalyzing} className="flex-1">
+                            {(isPending || isPdfAnalyzing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {initialData ? 'Actualizar' : 'Guardar'}
                         </Button>
                         {initialData && (
                             <AlertDialog>
@@ -531,7 +541,7 @@ export function FalloForm({ initialData }: FalloFormProps) {
                             <FormItem>
                             <FormLabel>Slug</FormLabel>
                             <FormControl><Input placeholder="medida-cautelar-favorable..." {...field} readOnly={!!initialData} /></FormControl>
-                            <FormDescription>URL amigable. Se genera automáticamente al crear.</FormDescription>
+                            <FormDescription>URL en /fallos/[slug]. Se genera al crear.</FormDescription>
                             <FormMessage />
                             </FormItem>
                         )}
@@ -563,7 +573,7 @@ export function FalloForm({ initialData }: FalloFormProps) {
                                         !field.value && "text-muted-foreground"
                                     )}
                                     >
-                                    {field.value ? format(field.value, "PPP", { timeZone: 'UTC' }) : <span>Seleccione una fecha</span>}
+                                    {field.value ? format(field.value, "PPP") : <span>Seleccione una fecha</span>}
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                     </Button>
                                 </FormControl>

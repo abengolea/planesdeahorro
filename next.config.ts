@@ -1,14 +1,17 @@
 import type {NextConfig} from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
+  /* Monorepo local: forzar trazado al root de esta app (evita lockfile del repo padre). */
+  outputFileTracingRoot: path.join(__dirname),
   /* Evita empaquetar pdf.js en el bundle del servidor. */
   serverExternalPackages: ['pdf-parse', 'pdfjs-dist'],
   /* config options here */
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   images: {
     remotePatterns: [

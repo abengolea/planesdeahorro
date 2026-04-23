@@ -23,6 +23,14 @@
         { "fieldPath": "slug", "order": "ASCENDING" },
         { "fieldPath": "published", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "fallos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "published", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

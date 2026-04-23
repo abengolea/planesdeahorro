@@ -12,7 +12,7 @@ const OutputSchema = z.object({
   onTopic: z
     .boolean()
     .describe(
-      'true solo si el texto trata de forma sustancial sobre planes de ahorro automotor (Argentina), administradora, cuotas, mora, rescisión, liquidación de haberes, adjudicación, secuestro prendario, cláusulas del contrato, devolución de fondos, seguros del plan, o situación análoga vinculada a ese producto.',
+      'true solo si el texto trata de forma sustancial sobre planes de ahorro automotor (Argentina), administradora, cuotas, mora, rescisión, liquidación de haberes, adjudicación, ejecución prendaria o secuestro, cláusulas del contrato, devolución de fondos, seguros del plan, o situación análoga vinculada a ese producto.',
     ),
 });
 

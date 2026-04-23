@@ -3,8 +3,44 @@ import { withLlmRetry } from '@/ai/llm-retry';
 import { googleAI } from '@genkit-ai/google-genai';
 import { openAI } from '@genkit-ai/compat-oai/openai';
 
+/**
+ * Variables de entorno relevantes (mismo criterio que `src/ai/genkit.ts`):
+ * - `GEMINI_MODEL`, `GEMINI_MODEL_FALLBACKS` (lista separada por comas)
+ * - `OPENAI_MODEL`, `OPENAI_MODEL_FALLBACKS`
+ * - Con ambas claves, el principal es **Gemini**; `LLM_PROVIDER=openai` prioriza OpenAI.
+ * - `LLM_CROSS_PROVIDER_FALLBACK`: si no se define, queda activo solo cuando hay
+ *   clave de Google (Gemini) y de OpenAI a la vez; `0`/`false` lo desactiva;
+ *   `1`/`true` lo fuerza (requiere ambas claves para tener efecto).
+ */
+
 /** Referencia de modelo para `definePrompt(...)(input, { model })`. */
 export type LlmModelOption = ReturnType<typeof googleAI.model> | ReturnType<typeof openAI.model>;
+
+function hasGoogleAiKey(): boolean {
+  return Boolean(
+    process.env.GEMINI_API_KEY?.trim() ||
+      process.env.GOOGLE_API_KEY?.trim() ||
+      process.env.GOOGLE_GENAI_API_KEY?.trim(),
+  );
+}
+
+function hasOpenAiKey(): boolean {
+  return Boolean(process.env.OPENAI_API_KEY?.trim());
+}
+
+/**
+ * Respaldo Google ↔ OpenAI tras agotar la cadena del proveedor principal.
+ * Por defecto: encendido si ambas API keys están configuradas (evita quedar
+ * bloqueado por 503 en Gemini). Desactivar: `LLM_CROSS_PROVIDER_FALLBACK=0`.
+ */
+export function isCrossProviderFallbackEnabled(): boolean {
+  const v = process.env.LLM_CROSS_PROVIDER_FALLBACK?.trim().toLowerCase();
+  if (v === '0' || v === 'false' || v === 'no' || v === 'off') return false;
+  if (v === '1' || v === 'true' || v === 'yes' || v === 'on') {
+    return hasGoogleAiKey() && hasOpenAiKey();
+  }
+  return hasGoogleAiKey() && hasOpenAiKey();
+}
 
 /**
  * Pool por defecto (sin `GEMINI_MODEL_FALLBACKS`): se usa `primary` primero y luego el resto en este orden.
@@ -89,8 +125,32 @@ export function openaiModelChain(): ReturnType<typeof openAI.model>[] {
   return ids.map((id) => openAI.model(id));
 }
 
+/** OpenAI como primer modelo solo si no hay clave Gemini o si `LLM_PROVIDER=openai`. */
 export function useOpenAiAsPrimaryLlm(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY?.trim()) && process.env.LLM_PROVIDER !== 'google';
+  if (!hasOpenAiKey()) return false;
+  if (!hasGoogleAiKey()) return true;
+  return process.env.LLM_PROVIDER?.trim().toLowerCase() === 'openai';
+}
+
+function buildFullModelChainForPrompt(): { models: LlmModelOption[]; primaryLen: number } {
+  const primary = useOpenAiAsPrimaryLlm() ? openaiModelChain() : googleModelChain();
+  const primaryLen = primary.length;
+  if (!isCrossProviderFallbackEnabled()) {
+    return { models: primary, primaryLen };
+  }
+
+  const secondary = useOpenAiAsPrimaryLlm()
+    ? hasGoogleAiKey()
+      ? googleModelChain()
+      : []
+    : hasOpenAiKey()
+      ? openaiModelChain()
+      : [];
+
+  if (secondary.length === 0) {
+    return { models: primary, primaryLen };
+  }
+  return { models: [...primary, ...secondary], primaryLen };
 }
 
 /**
@@ -101,13 +161,19 @@ export async function runPromptWithModelFallback<TOut>(
   run: (model: LlmModelOption) => Promise<{ output?: TOut | null }>,
   options: { label: string; maxAttemptsPerModel?: number },
 ): Promise<{ output?: TOut | null }> {
-  const models = useOpenAiAsPrimaryLlm() ? openaiModelChain() : googleModelChain();
+  const { models, primaryLen } = buildFullModelChainForPrompt();
   const maxAttemptsPerModel = options.maxAttemptsPerModel ?? 3;
   let lastErr: unknown;
 
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     try {
+      if (i === primaryLen && models.length > primaryLen) {
+        console.warn(
+          '[%s] Cadena del proveedor principal agotada; probando proveedor alternativo.',
+          options.label,
+        );
+      }
       const result = await withLlmRetry(() => run(model), {
         label: `${options.label}[m${i}]`,
         maxAttempts: maxAttemptsPerModel,

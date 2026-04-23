@@ -29,20 +29,20 @@ export function AppHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-primary">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-primary font-headline">
+      <div className="container mx-auto flex h-[4.5rem] items-center justify-between px-4">
         <Link href="/">
           <Logo inverted />
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-7">
+        <nav className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
-                'text-sm font-medium transition-colors',
+                'text-base font-medium tracking-wide transition-colors',
                 pathname === link.href
                   ? 'text-white'
                   : 'text-white/55 hover:text-white/90'
@@ -56,7 +56,7 @@ export function AppHeader() {
         <div className="hidden md:flex items-center gap-4">
           <Button
             asChild
-            className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold text-sm h-9 px-5"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold text-base h-10 px-5"
           >
             <Link href="/evaluar-caso">Contanos tu caso</Link>
           </Button>
@@ -71,7 +71,10 @@ export function AppHeader() {
                 <span className="sr-only">Abrir menú</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[350px] bg-primary border-white/10">
+            <SheetContent
+              side="right"
+              className="w-[300px] sm:w-[350px] bg-primary border-white/10 font-headline"
+            >
               <SheetHeader>
                 <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
                 <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
@@ -85,7 +88,7 @@ export function AppHeader() {
                     href={link.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={cn(
-                      'py-3 px-2 text-base font-medium transition-colors border-b border-white/10',
+                      'py-3 px-2 text-lg font-medium tracking-wide transition-colors border-b border-white/10',
                       pathname === link.href
                         ? 'text-white'
                         : 'text-white/60 hover:text-white'
@@ -96,7 +99,7 @@ export function AppHeader() {
                 ))}
                 <Button
                   asChild
-                  className="mt-6 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold"
+                  className="mt-6 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold text-base h-10"
                 >
                   <Link href="/evaluar-caso" onClick={() => setIsMobileMenuOpen(false)}>
                     Contanos tu caso

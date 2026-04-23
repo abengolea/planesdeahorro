@@ -74,9 +74,125 @@ service cloud.firestore {
      * @principle Segregates sensitive user-submitted data, allowing public creation but private-by-default access.
      */
     match /case_evaluations/{caseEvaluationId} {
-      allow get, list: if isAdmin();
+      allow get: if isAdmin()
+        || (isSignedIn() && resource.data.clientPortalUid == request.auth.uid);
+      /**
+       * Listado: solo administradores, o el cliente con consultas filtradas por `clientPortalUid` (p. ej.
+       * where('clientPortalUid', '==', request.auth.uid)). Sin ese filtro, la consulta no puede devolver
+       * documentos ajenos y Firestore deniega la operación.
+       */
+      allow list: if isAdmin()
+        || (isSignedIn() && resource.data.clientPortalUid == request.auth.uid);
       allow create: if true;
       allow update, delete: if isAdmin() && resource != null;
+
+      match /expediente_movimientos/{movId} {
+        allow read: if isAdmin()
+          || (
+            isSignedIn()
+            && get(/databases/$(database)/documents/case_evaluations/$(caseEvaluationId)).data.clientPortalUid
+              == request.auth.uid
+          );
+        allow write: if false;
+      }
+
+      match /client_uploads/{uploadId} {
+        allow read: if isAdmin()
+          || (
+            isSignedIn()
+            && get(/databases/$(database)/documents/case_evaluations/$(caseEvaluationId)).data.clientPortalUid
+              == request.auth.uid
+          );
+        allow create: if isSignedIn()
+          && get(/databases/$(database)/documents/case_evaluations/$(caseEvaluationId)).data.clientPortalUid
+            == request.auth.uid
+          && request.resource.data.uploadedByUid == request.auth.uid
+          && request.resource.data.keys().hasAll([
+            'storagePath',
+            'fileName',
+            'uploadedByUid',
+            'uploadedAt',
+          ])
+          && request.resource.data.keys().hasOnly([
+            'storagePath',
+            'fileName',
+            'contentType',
+            'size',
+            'uploadedByUid',
+            'uploadedAt',
+          ])
+          && (
+            request.resource.data.contentType == 'application/pdf'
+            || request.resource.data.contentType == 'application/x-pdf'
+          );
+        allow update, delete: if false;
+      }
+
+      /**
+       * Chat interno entre cliente (portal) y administradores.
+       */
+      match /portal_chat/{msgId} {
+        function caseEval() {
+          return get(/databases/$(database)/documents/case_evaluations/$(caseEvaluationId));
+        }
+
+        function portalChatPayloadOk() {
+          return request.resource.data.keys().hasAll([
+              'text',
+              'authorUid',
+              'authorRole',
+              'createdAt',
+            ])
+            && request.resource.data.keys().hasOnly([
+              'text',
+              'authorUid',
+              'authorRole',
+              'createdAt',
+            ])
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 8000
+            && request.resource.data.authorUid is string
+            && request.resource.data.authorUid == request.auth.uid
+            && request.resource.data.authorRole is string
+            && (
+              request.resource.data.authorRole == 'client'
+              || request.resource.data.authorRole == 'admin'
+            );
+        }
+
+        allow read: if isAdmin()
+          || (
+            isSignedIn()
+            && caseEval().data.clientPortalUid == request.auth.uid
+          );
+
+        allow create: if portalChatPayloadOk()
+          && (
+            (
+              isAdmin()
+              && request.resource.data.authorRole == 'admin'
+            )
+            || (
+              isSignedIn()
+              && caseEval().data.clientPortalUid == request.auth.uid
+              && request.resource.data.authorRole == 'client'
+            )
+          );
+
+        allow update, delete: if false;
+      }
+    }
+
+    /**
+     * Perfiles del portal del cliente: listado de expedientes vinculados al UID.
+     * Escritura solo desde servidor (Admin SDK).
+     */
+    match /client_portal_profiles/{profileUid} {
+      /** `read` cubre get y suscripciones; el cliente solo lee su propio documento por ID. */
+      allow read: if isSignedIn() && request.auth.uid == profileUid;
+      allow list: if false;
+      allow create, update, delete: if false;
     }
 
     /**
