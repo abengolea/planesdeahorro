@@ -6,6 +6,8 @@ import { doc } from 'firebase/firestore';
 import type { DoctrinaArticle } from '@/lib/types';
 import { DoctrinaForm } from '../doctrina-form';
 import { Skeleton } from '@/components/ui/skeleton';
+import { siteContainer, siteAdminY } from '@/lib/site-layout';
+import { cn } from '@/lib/utils';
 
 function EditSkeleton() {
   return (
@@ -34,8 +36,8 @@ export default function EditarDoctrinaPage() {
   const { data: articulo, isLoading } = useDoc<DoctrinaArticle>(docRef);
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className={cn(siteContainer, siteAdminY)}>
+      <div className="max-w-4xl mx-auto w-full">
         <div className="mb-8">
           <h1 className="font-headline text-3xl md:text-4xl text-primary">Editar artículo</h1>
           <p className="text-muted-foreground">Modifique el contenido o el estado de publicación.</p>

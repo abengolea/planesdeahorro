@@ -29,6 +29,9 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.25rem;
+    /* Marca: no se redefine en .dark — header, footer y franjas hero siempre azul institucional */
+    --brand: 218 65% 18%;
+    --brand-foreground: 0 0% 100%;
     --sidebar-background: 220 20% 14%;
     --sidebar-foreground: 220 15% 95%;
     --sidebar-primary: 215 80% 75%;
@@ -37,6 +40,8 @@
     --sidebar-accent-foreground: 220 15% 95%;
     --sidebar-border: 220 20% 20%;
     --sidebar-ring: 215 80% 75%;
+    --whatsapp: 142 64% 49%;
+    --whatsapp-hover: 162 72% 32%;
   }
   .dark {
     --background: 220 20% 11%;
@@ -71,6 +76,8 @@
     --sidebar-accent-foreground: 220 15% 95%;
     --sidebar-border: 220 20% 20%;
     --sidebar-ring: 215 80% 75%;
+    --whatsapp: 142 55% 42%;
+    --whatsapp-hover: 162 65% 38%;
   }
 }
 
@@ -87,5 +94,19 @@
   h1, h2, h3, h4, h5, h6 {
     /* Fuerza EB Garamond en todos los headings */
     font-family: var(--font-eb-garamond), 'EB Garamond', Georgia, 'Times New Roman', serif;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

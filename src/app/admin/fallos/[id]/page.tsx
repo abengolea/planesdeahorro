@@ -6,6 +6,8 @@ import { doc } from 'firebase/firestore';
 import type { Fallo } from '@/lib/types';
 import { FalloForm } from '../fallo-form';
 import { Skeleton } from '@/components/ui/skeleton';
+import { siteContainer, siteAdminY } from '@/lib/site-layout';
+import { cn } from '@/lib/utils';
 
 function EditFalloSkeleton() {
     return (
@@ -35,8 +37,8 @@ export default function EditarFalloPage() {
   const { data: fallo, isLoading } = useDoc<Fallo>(docRef);
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className={cn(siteContainer, siteAdminY)}>
+      <div className="max-w-4xl mx-auto w-full">
         <div className="mb-8">
           <h1 className="font-headline text-3xl md:text-4xl text-primary">Editar Fallo</h1>
           <p className="text-muted-foreground">Modifique los detalles del fallo judicial.</p>

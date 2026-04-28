@@ -6,6 +6,7 @@ import { Menu } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
 import {
   Sheet,
@@ -20,7 +21,7 @@ const navLinks = [
   { href: '/#problemas', label: 'Problemas' },
   { href: '/fallos', label: 'Fallos' },
   { href: '/doctrina', label: 'Doctrina' },
-  { href: '/faq', label: 'FAQ' },
+  { href: '/faq', label: 'Preguntas Frecuentes' },
   { href: '/sobre-mi', label: 'Sobre Mí' },
 ];
 
@@ -29,8 +30,8 @@ export function AppHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-primary font-headline">
-      <div className="container mx-auto flex h-[4.5rem] items-center justify-between px-4">
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-brand text-brand-foreground font-headline isolate">
+      <div className="relative z-10 container mx-auto flex h-[4.5rem] items-center justify-between px-4">
         <Link href="/">
           <Logo inverted />
         </Link>
@@ -53,7 +54,8 @@ export function AppHeader() {
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-2">
+          <ThemeToggle />
           <Button
             asChild
             className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold text-base h-10 px-5"
@@ -63,17 +65,22 @@ export function AppHeader() {
         </div>
 
         {/* Mobile Navigation */}
-        <div className="md:hidden">
+        <div className="flex items-center gap-1 md:hidden">
+          <ThemeToggle />
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-11 min-w-11 text-white hover:bg-white/10 hover:text-white"
+              >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Abrir menú</span>
               </Button>
             </SheetTrigger>
             <SheetContent
               side="right"
-              className="w-[300px] sm:w-[350px] bg-primary border-white/10 font-headline"
+              className="w-[300px] sm:w-[350px] bg-brand text-brand-foreground border-white/10 font-headline"
             >
               <SheetHeader>
                 <SheetTitle className="sr-only">Menú de navegación</SheetTitle>

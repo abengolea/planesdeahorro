@@ -9,6 +9,7 @@ import { Calendar, FileDown, Gavel, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { siteContainer, siteContentSection } from '@/lib/site-layout';
 
 export default function RulingDetailPage() {
   const params = useParams();
@@ -46,8 +47,8 @@ export default function RulingDetailPage() {
 
   if (loading) {
     return (
-      <div className="bg-card py-12 md:py-20">
-        <div className="container mx-auto px-4 max-w-4xl">
+      <div className={`bg-background ${siteContentSection}`}>
+        <div className={`${siteContainer} max-w-4xl`}>
           <Skeleton className="h-10 w-3/4 mb-4" />
           <Skeleton className="h-6 w-1/2 mb-6" />
           <div className="space-y-4 mt-8">
@@ -62,8 +63,8 @@ export default function RulingDetailPage() {
 
   if (fallosError) {
     return (
-      <div className="bg-card py-12 md:py-20">
-        <div className="container mx-auto px-4 max-w-4xl text-center">
+      <div className={`bg-background ${siteContentSection}`}>
+        <div className={`${siteContainer} max-w-4xl text-center`}>
           <p className="text-muted-foreground mb-4">
             No se pudo cargar el fallo. Si acabás de desplegar índices de Firestore, esperá unos minutos y recargá.
           </p>
@@ -78,8 +79,8 @@ export default function RulingDetailPage() {
 
   if (!ruling) {
     return (
-      <div className="bg-card py-12 md:py-20">
-        <div className="container mx-auto px-4 max-w-lg text-center">
+      <div className={`bg-background ${siteContentSection}`}>
+        <div className={`${siteContainer} max-w-lg text-center`}>
           <Gavel className="mx-auto h-10 w-10 text-muted-foreground/40 mb-4" />
           <h1 className="font-headline text-2xl font-bold text-foreground mb-2">Fallo no disponible</h1>
           <p className="text-sm text-muted-foreground mb-4">
@@ -95,8 +96,8 @@ export default function RulingDetailPage() {
   }
 
   return (
-    <div className="bg-card py-12 md:py-20">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className={`bg-background ${siteContentSection}`}>
+      <div className={`${siteContainer} max-w-4xl`}>
         <article className="prose lg:prose-xl max-w-none dark:prose-invert prose-headings:font-headline prose-headings:text-primary">
           <div className="mb-8">
             <div className="not-prose flex flex-wrap items-center gap-2 mb-3">

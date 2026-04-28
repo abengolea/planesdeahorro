@@ -75,10 +75,12 @@ export async function sendClientCaseUpdateEmail(options: {
       `;
       break;
     case 'aceptado':
-      subject = 'Dr. Adrián Bengolea — Próximos pasos en tu consulta';
+      subject = 'Dr. Adrián Bengolea — Aceptamos tu consulta';
       coreHtml = `
         <p style="${p}">Hola ${safeName},</p>
-        <p style="${p}">Gracias por la información enviada. Podemos avanzar con el siguiente paso respecto de tu consulta.</p>
+        <p style="${p}">El <strong>Dr. Adrián Bengolea</strong> te informa que, luego de revisar los datos de tu consulta, <strong>el estudio acepta tu caso</strong> y puede continuar el contacto vinculado a reclamos por planes de ahorro, dentro de la línea de trabajo del estudio.</p>
+        <p style="${p}">En el <strong>menor plazo posible</strong> nos vamos a comunicar por <strong>WhatsApp</strong> al número que registraste, para avanzar con el asunto. Si hiciera falta un turno, documentación adicional o otro canal de contacto, te lo vamos a indicar en ese mensaje o por este correo.</p>
+        <p style="${p}">Gracias por la confianza depositada en el estudio.</p>
       `;
       break;
     case 'rechazado':

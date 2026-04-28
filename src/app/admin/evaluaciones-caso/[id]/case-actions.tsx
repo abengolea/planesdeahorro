@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase/provider';
+import { describeFirebaseClientAuthError, getIdTokenWithRetry, useUser } from '@/firebase';
 import type { CaseEvaluationSubmission } from '@/lib/types';
 import type { Timestamp } from 'firebase/firestore';
 import type { CaseEvaluationStatus } from '@/lib/case-evaluation-status';
@@ -102,7 +102,7 @@ export function CaseEvaluationActions({
     }
     setSubmitting(true);
     try {
-      const token = await user.getIdToken();
+      const token = await getIdTokenWithRetry(user);
       const res = await resolveCaseEvaluation(token, evaluationId, {
         status,
         sendEmailToClient: sendEmail,
@@ -124,7 +124,7 @@ export function CaseEvaluationActions({
     } catch (e) {
       toast({
         title: 'Error',
-        description: e instanceof Error ? e.message : 'Intentá de nuevo.',
+        description: describeFirebaseClientAuthError(e),
         variant: 'destructive',
       });
     } finally {
@@ -139,7 +139,7 @@ export function CaseEvaluationActions({
     }
     setArchiving(true);
     try {
-      const token = await user.getIdToken();
+      const token = await getIdTokenWithRetry(user);
       const res = await setCaseEvaluationArchived(token, evaluationId, nextArchived);
       if (!res.ok) {
         toast({ title: 'No se pudo actualizar', description: res.error, variant: 'destructive' });
@@ -154,7 +154,7 @@ export function CaseEvaluationActions({
     } catch (e) {
       toast({
         title: 'Error',
-        description: e instanceof Error ? e.message : 'Intentá de nuevo.',
+        description: describeFirebaseClientAuthError(e),
         variant: 'destructive',
       });
     } finally {
@@ -169,7 +169,7 @@ export function CaseEvaluationActions({
     }
     setDeleting(true);
     try {
-      const token = await user.getIdToken();
+      const token = await getIdTokenWithRetry(user);
       const res = await deleteCaseEvaluation(token, evaluationId);
       if (!res.ok) {
         toast({ title: 'No se pudo borrar', description: res.error, variant: 'destructive' });
@@ -181,7 +181,7 @@ export function CaseEvaluationActions({
     } catch (e) {
       toast({
         title: 'Error',
-        description: e instanceof Error ? e.message : 'Intentá de nuevo.',
+        description: describeFirebaseClientAuthError(e),
         variant: 'destructive',
       });
     } finally {
@@ -200,7 +200,7 @@ export function CaseEvaluationActions({
     }
     setDraftingAcceptMessage(true);
     try {
-      const token = await user.getIdToken();
+      const token = await getIdTokenWithRetry(user);
       const res = await draftAcceptCaseMessageForEvaluation(token, evaluationId);
       if (!res.ok) {
         toast({
@@ -218,7 +218,7 @@ export function CaseEvaluationActions({
     } catch (e) {
       toast({
         title: 'Error',
-        description: e instanceof Error ? e.message : 'Intentá de nuevo.',
+        description: describeFirebaseClientAuthError(e),
         variant: 'destructive',
       });
     } finally {
@@ -231,21 +231,25 @@ export function CaseEvaluationActions({
       <Card className="border-primary/20">
         <CardHeader>
           <CardTitle>Gestionar caso</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base leading-relaxed">
             Cambiá el estado, registrá una nota interna y avisá al cliente por correo cuando corresponda.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">Estado actual:</span>
-            <Badge variant="outline">{formatCaseEvaluationStatus(row.status)}</Badge>
+        <CardContent className="space-y-5 text-base">
+          <div className="flex flex-wrap items-center gap-2 gap-y-2">
+            <span className="text-base text-muted-foreground">Estado actual:</span>
+            <Badge variant="outline" className="text-sm font-semibold px-3 py-1">
+              {formatCaseEvaluationStatus(row.status)}
+            </Badge>
             {statusNorm && isTerminalCaseStatus(statusNorm) ? (
-              <span className="text-xs text-muted-foreground">(Podés reabrir el caso cambiando el estado.)</span>
+              <span className="text-sm text-muted-foreground leading-snug">
+                (Podés reabrir el caso cambiando el estado.)
+              </span>
             ) : null}
           </div>
 
           {(row.statusUpdatedAt || row.adminInternalNote || row.lastClientNotifiedAt) && (
-            <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-2">
+            <div className="rounded-md border bg-muted/30 p-4 text-base space-y-2.5 leading-relaxed">
               {row.statusUpdatedAt ? (
                 <p>
                   <span className="text-muted-foreground">Último cambio: </span>
@@ -262,7 +266,7 @@ export function CaseEvaluationActions({
                 </p>
               ) : null}
               {row.lastClientNotifiedAt ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Último mail al cliente: {formatTs(row.lastClientNotifiedAt)}
                   {row.lastClientNotifiedKind ? ` (${row.lastClientNotifiedKind})` : ''}
                 </p>
@@ -272,37 +276,36 @@ export function CaseEvaluationActions({
 
           <Separator />
 
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => openDialog('pendiente')}>
+          <div className="flex flex-wrap gap-2.5">
+            <Button type="button" variant="secondary" onClick={() => openDialog('pendiente')}>
               Pendiente de revisión
             </Button>
-            <Button type="button" variant="secondary" size="sm" onClick={() => openDialog('analisis')}>
+            <Button type="button" variant="secondary" onClick={() => openDialog('analisis')}>
               En análisis
             </Button>
-            <Button type="button" size="sm" onClick={() => openDialog('aceptar')}>
+            <Button type="button" onClick={() => openDialog('aceptar')}>
               Aceptar caso
             </Button>
-            <Button type="button" variant="destructive" size="sm" onClick={() => openDialog('rechazar')}>
+            <Button type="button" variant="destructive" onClick={() => openDialog('rechazar')}>
               Rechazar
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => openDialog('derivar')}>
+            <Button type="button" variant="outline" onClick={() => openDialog('derivar')}>
               Derivar
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => openDialog('cerrado')}>
+            <Button type="button" variant="outline" onClick={() => openDialog('cerrado')}>
               Cerrar
             </Button>
           </div>
 
           <Separator />
 
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-xs font-medium uppercase text-muted-foreground w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2.5 items-center">
+            <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground w-full sm:w-auto">
               Archivo y peligro
             </span>
             <Button
               type="button"
               variant="outline"
-              size="sm"
               disabled={submitting || archiving || deleting}
               onClick={() => void toggleArchived(!row.archived)}
             >
@@ -311,7 +314,6 @@ export function CaseEvaluationActions({
             <Button
               type="button"
               variant="destructive"
-              size="sm"
               disabled={submitting || archiving || deleting}
               onClick={() => setDeleteOpen(true)}
             >
@@ -406,8 +408,8 @@ export function CaseEvaluationActions({
           <DialogHeader>
             <DialogTitle>Aceptar caso</DialogTitle>
             <DialogDescription>
-              Se enviará un correo indicando que podés avanzar. Sumá próximos pasos concretos (turno, WhatsApp,
-              documentación).
+              El correo confirma que el estudio acepta el caso y el contacto por WhatsApp. Podés sumar en el mensaje
+              próximos pasos concretos (turno, documentación o detalles del contacto).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">

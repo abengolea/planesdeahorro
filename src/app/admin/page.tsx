@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Bot, FileText, Gavel, ClipboardList, BookOpen, ArrowRight } from 'lucide-react';
+import { siteContainer, siteAdminY } from '@/lib/site-layout';
+import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'Administración',
@@ -51,7 +53,7 @@ const adminCards = [
 
 export default function AdminDashboardPage() {
   return (
-    <div className="p-6 md:p-10 max-w-5xl">
+    <div className={cn(siteContainer, siteAdminY, 'max-w-5xl')}>
       <div className="mb-10 border-b border-border pb-8">
         <p className="text-sm font-medium tracking-[0.25em] uppercase text-accent mb-2">
           Panel de control

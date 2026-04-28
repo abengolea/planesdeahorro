@@ -10,6 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, BookOpen, FilePenLine } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { siteContainer, siteAdminY } from '@/lib/site-layout';
+import { cn } from '@/lib/utils';
 
 function DocListSkeleton() {
   return (
@@ -48,7 +50,7 @@ export default function GestionarDocumentosPage() {
   const activeDocs = docs?.filter((d) => d.active).length ?? 0;
 
   return (
-    <div className="p-4 md:p-8">
+    <div className={cn(siteContainer, siteAdminY)}>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-headline text-3xl md:text-4xl text-primary">Base de Conocimiento IA</h1>

@@ -13,8 +13,9 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Bot, LayoutDashboard, FileText, Gavel, ClipboardList } from 'lucide-react';
+import { Bot, LayoutDashboard, FileText, Gavel, ClipboardList, BookOpen } from 'lucide-react';
 import { Logo } from '@/components/logo';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { AdminAuthGate } from '@/app/admin/admin-auth-gate';
 import { Button } from '@/components/ui/button';
 import { AdminCaseNotificationsBell } from '@/components/admin-case-notifications-bell';
@@ -25,6 +26,7 @@ const adminNavItems = [
   { href: '/admin/herramientas-ai', label: 'Herramientas IA', icon: Bot },
   { href: '/admin/fallos', label: 'Gestionar Fallos', icon: Gavel },
   { href: '/admin/doctrina', label: 'Gestionar Doctrina', icon: FileText },
+  { href: '/admin/documentos', label: 'Base de conocimiento', icon: BookOpen },
 ];
 
 function AdminSidebarShell({ children }: { children: React.ReactNode }) {
@@ -41,19 +43,19 @@ function AdminSidebarShell({ children }: { children: React.ReactNode }) {
               <Logo inverted />
             </Link>
             <div className="flex items-center gap-1">
+              <ThemeToggle className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
               <AdminCaseNotificationsBell />
               <SidebarTrigger />
             </div>
           </div>
           {user && (
-            <div className="mt-3 flex flex-col gap-2 border-t pt-3">
-              <p className="truncate text-xs text-muted-foreground" title={user.email ?? undefined}>
+            <div className="mt-3 flex flex-col gap-2 border-t border-sidebar-border pt-3">
+              <p className="truncate text-sm text-sidebar-foreground/80" title={user.email ?? undefined}>
                 {user.email}
               </p>
               <Button
                 variant="outline"
-                size="sm"
-                className="w-full text-xs"
+                className="w-full text-sm"
                 onClick={() => signOut(auth)}
               >
                 Cerrar sesión
@@ -66,6 +68,7 @@ function AdminSidebarShell({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
+                  size="lg"
                   isActive={
                     item.href === '/admin'
                       ? pathname === '/admin'

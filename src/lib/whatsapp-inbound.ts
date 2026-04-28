@@ -53,6 +53,51 @@ export function plainTextForWhatsapp(markdown: string): string {
     .trim();
 }
 
+/**
+ * Si el usuario respondió solo con un índice (1–n) y el asistente había ofrecido opciones numeradas,
+ * sustituye por el texto de la opción para que el modelo no confunda cantidad con elección.
+ */
+export function expandNumericQuickReplyChoice<T extends { role: string; content: string; quickReplies?: string[] }>(
+  history: T[],
+): T[] {
+  if (history.length < 2) return history;
+  const last = history[history.length - 1];
+  const prev = history[history.length - 2];
+  if (last.role !== 'user' || prev.role !== 'assistant') return history;
+
+  const trimmed = last.content.trim();
+  const numMatch = trimmed.match(/^(\d{1,2})$/);
+  if (!numMatch) return history;
+  const index = parseInt(numMatch[1], 10);
+  if (index < 1 || index > 30) return history;
+
+  let options = prev.quickReplies?.length ? [...prev.quickReplies] : null;
+  if (!options?.length) {
+    options = parseNumberedLinesFromAssistantText(prev.content);
+  }
+  if (!options?.length || index > options.length) return history;
+
+  const chosen = options[index - 1];
+  const out = history.slice(0, -1);
+  out.push({ ...last, content: chosen });
+  return out;
+}
+
+function parseNumberedLinesFromAssistantText(content: string): string[] | null {
+  const lines = content.split(/\r?\n/);
+  const found: string[] = [];
+  for (const line of lines) {
+    const m = line.trim().match(/^(\d{1,2})[\.\)]\s+(.+)$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n === found.length + 1) {
+        found.push(m[2].trim());
+      }
+    }
+  }
+  return found.length ? found : null;
+}
+
 export function formatAssistantReplyForWhatsapp(content: string, quickReplies?: string[]): string {
   let out = plainTextForWhatsapp(content);
   if (quickReplies?.length) {

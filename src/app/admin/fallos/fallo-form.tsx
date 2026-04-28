@@ -16,7 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Fallo } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import React, { useRef, useState, useTransition } from 'react';
+import React, { useLayoutEffect, useRef, useState, useTransition } from 'react';
 import { CalendarIcon, FileDown, FileUp, Loader2, Trash } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
 const PDF_MAX_BYTES = 12 * 1024 * 1024;
+
+const FALLO_NUEVO_DRAFT_KEY = 'planesdeahorro:admin-fallo-nuevo-v1';
+/** En React 18 Strict Mode el efecto corre dos veces; el flag de módulo evita doble “restaurar” y doble toast. */
+let falloNuevoBorradorYaRestaurado = false;
 
 function storageErrorDescription(error: unknown): string {
   if (error instanceof FirebaseError) {
@@ -76,15 +80,27 @@ interface FalloFormProps {
   initialData?: Fallo;
 }
 
+/** Slug para URL: minúsculas, guiones; compatible con eñe y tildes (no usar \w, pierde letras en español). */
 function slugify(text: string) {
   return text
     .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/\s+/g, '-') // Replace spaces with -
-    .replace(/[^\w\-]+/g, '') // Remove all non-word chars
-    .replace(/\-\-+/g, '-') // Replace multiple - with single -
-    .replace(/^-+/, '') // Trim - from start of text
-    .replace(/-+$/, ''); // Trim - from end of text
+    .replace(/ñ/g, 'n')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/** Interpreta YYYY-MM-DD en hora local (evita desfasajes por UTC). */
+function parseRulingDateIso(ymd: string | undefined | null): Date | null {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null;
+  const [y, m, d] = ymd.split('-').map((n) => parseInt(n, 10));
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const out = new Date(y, m - 1, d);
+  if (out.getFullYear() !== y || out.getMonth() !== m - 1 || out.getDate() !== d) return null;
+  return out;
 }
 
 export function FalloForm({ initialData }: FalloFormProps) {
@@ -125,6 +141,80 @@ export function FalloForm({ initialData }: FalloFormProps) {
     }
   }, [title, form, initialData]);
 
+  /** Recupera borrador al volver a la página (recarga, hot-reload) sin depender de la API. */
+  useLayoutEffect(() => {
+    if (initialData || falloNuevoBorradorYaRestaurado) return;
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem(FALLO_NUEVO_DRAFT_KEY);
+      if (!raw) return;
+      const p = JSON.parse(raw) as {
+        title?: string;
+        slug?: string;
+        summary?: string;
+        tribunal?: string;
+        date?: string;
+        content?: string;
+        published?: boolean;
+        tags?: string;
+      };
+      falloNuevoBorradorYaRestaurado = true;
+      form.reset({
+        title: p.title ?? '',
+        slug: p.slug ?? '',
+        summary: p.summary ?? '',
+        tribunal: p.tribunal ?? '',
+        date: p.date ? new Date(p.date) : new Date(),
+        content: p.content ?? '',
+        published: p.published ?? false,
+        tags: typeof p.tags === 'string' ? p.tags : '',
+      });
+      toast({
+        title: 'Borrador recuperado',
+        description:
+          'Se restauró un borrador guardado en el navegador. Si recargaste la página, revisá y guardá de nuevo el fallo.',
+      });
+    } catch {
+      // ignorar JSON inválido
+    }
+  }, [form, initialData, toast]);
+
+  /** Autoguarda el borrador mientras completás un fallo nuevo (no incluye el archivo PDF). */
+  React.useEffect(() => {
+    if (initialData) return;
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const sub = form.watch(() => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        const v = form.getValues();
+        const hasSomething =
+          (v.title?.trim().length ?? 0) > 0 ||
+          (v.content?.trim().length ?? 0) > 30 ||
+          (v.summary?.trim().length ?? 0) > 0 ||
+          (v.tribunal?.trim().length ?? 0) > 0;
+        try {
+          if (!hasSomething) {
+            sessionStorage.removeItem(FALLO_NUEVO_DRAFT_KEY);
+            return;
+          }
+          sessionStorage.setItem(
+            FALLO_NUEVO_DRAFT_KEY,
+            JSON.stringify({
+              ...v,
+              date: v.date instanceof Date ? v.date.toISOString() : v.date,
+            })
+          );
+        } catch {
+          // cuota o modo privado
+        }
+      }, 500);
+    });
+    return () => {
+      if (t) clearTimeout(t);
+      sub.unsubscribe();
+    };
+  }, [form, initialData]);
+
   const handleAnalyzePdf = () => {
     const file = pdfInputRef.current?.files?.[0];
     if (!file || file.size === 0) {
@@ -157,17 +247,30 @@ export function FalloForm({ initialData }: FalloFormProps) {
       form.setValue('content', d.extractedText, { shouldValidate: true });
       form.setValue('summary', d.summary, { shouldValidate: true });
       form.setValue('tags', d.tags.join(', '), { shouldValidate: true });
+
       const titleVal = d.suggestedTitle?.trim();
       if (titleVal && (!initialData || !form.getValues('title')?.trim())) {
         form.setValue('title', titleVal, { shouldValidate: true });
+        form.setValue('slug', slugify(titleVal), { shouldValidate: true });
       }
+
       const tribunalVal = d.suggestedTribunal?.trim();
       if (tribunalVal && (!initialData || !form.getValues('tribunal')?.trim())) {
         form.setValue('tribunal', tribunalVal, { shouldValidate: true });
       }
+
+      const rulingDate = parseRulingDateIso(d.suggestedRulingDate);
+      if (rulingDate) {
+        form.setValue('date', rulingDate, { shouldValidate: true });
+      }
+
       toast({
         title: 'PDF analizado',
-        description: `Se generó resumen, etiquetas y texto a partir de “${d.fileName}”. Guardá el fallo para publicar el PDF en el sitio.`,
+        description: `Se generó resumen, etiquetas y texto a partir de “${d.fileName}”. ${
+          titleVal || tribunalVal || rulingDate
+            ? 'Revisá carátula, tribunal y fecha; podés corregir cualquier campo antes de guardar.'
+            : 'Si faltan carátula, tribunal o fecha, completalos a mano o reintentá. Guardá el fallo para publicar el PDF en el sitio.'
+        }`,
       });
     });
   };
@@ -299,6 +402,11 @@ export function FalloForm({ initialData }: FalloFormProps) {
             });
           }
           toast({ title: 'Fallo creado con éxito' });
+          try {
+            sessionStorage.removeItem(FALLO_NUEVO_DRAFT_KEY);
+          } catch {
+            /* noop */
+          }
         }
         router.push('/admin/fallos');
         router.refresh(); // to reflect changes
@@ -351,8 +459,10 @@ export function FalloForm({ initialData }: FalloFormProps) {
                     <p className="text-sm font-medium">Documento en PDF (opcional)</p>
                     <p className="text-sm text-muted-foreground mt-1">
                       Subí un PDF del fallo: se extrae el texto en el servidor y la IA puede completar resumen, etiquetas y
-                      cuerpo (texto íntegro o depurado). Al <strong className="text-foreground">Guardar</strong>, el mismo PDF
-                      se publica y los visitantes lo ven embebido en la ficha.
+                      cuerpo (texto íntegro; incluye la carátula al inicio). Al{' '}
+                      <strong className="text-foreground">Guardar</strong>, el mismo PDF
+                      se publica y los visitantes lo ven embebido en la ficha. En “Crear fallo” el navegador guarda un
+                      borrador mientras completás, por si se recarga la pestaña o el entorno de desarrollo.
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -420,9 +530,9 @@ export function FalloForm({ initialData }: FalloFormProps) {
                     <FormItem>
                       <FormLabel>Título del fallo (carátula)</FormLabel>
                       <FormControl>
-                        <Input
-                          className="font-medium tracking-tight"
-                          placeholder="CASTRO CINTIA DEL VALLE C/ SOCIEDAD ADMINISTRADORA S.A. S/ DAÑOS Y PERJUICIOS"
+                        <Textarea
+                          className="font-medium tracking-tight min-h-[4.5rem] resize-y"
+                          placeholder="Escribí o pegá la carátula en MAYÚSCULAS. Con “Extraer texto y generar con IA” puede completarse desde el PDF."
                           name={field.name}
                           ref={field.ref}
                           onBlur={field.onBlur}
@@ -430,11 +540,12 @@ export function FalloForm({ initialData }: FalloFormProps) {
                           onChange={(e) =>
                             field.onChange(e.target.value.toLocaleUpperCase('es-AR'))
                           }
+                          rows={3}
                         />
                       </FormControl>
                       <FormDescription>
-                        Usá MAYÚSCULAS como en el expediente judicial, para mantener el mismo criterio que el resto del
-                        sitio. El análisis por IA sugiere la carátula en mayúsculas.
+                        El recuadro se guarda con lo que escribas: el texto atenuado de arriba es una sugerencia, no un
+                        bloqueo. MAYÚSCULAS como en el expediente; la IA sugiere carátula y slug al analizar el PDF.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -541,7 +652,10 @@ export function FalloForm({ initialData }: FalloFormProps) {
                             <FormItem>
                             <FormLabel>Slug</FormLabel>
                             <FormControl><Input placeholder="medida-cautelar-favorable..." {...field} readOnly={!!initialData} /></FormControl>
-                            <FormDescription>URL en /fallos/[slug]. Se genera al crear.</FormDescription>
+                            <FormDescription>
+                              URL en /fallos/[slug]. Al crear, se rellena desde la carátula; podés ajustarla. Al editar un
+                              fallo ya publicado, el slug queda fijo.
+                            </FormDescription>
                             <FormMessage />
                             </FormItem>
                         )}
@@ -552,7 +666,11 @@ export function FalloForm({ initialData }: FalloFormProps) {
                         render={({ field }) => (
                             <FormItem>
                             <FormLabel>Tribunal</FormLabel>
-                            <FormControl><Input placeholder="Juzgado Civil y Comercial N°10..." {...field} /></FormControl>
+                            <FormControl><Input placeholder="Juzgado Civil y Comercial N° 10, Cámara, etc." {...field} /></FormControl>
+                            <FormDescription className="text-xs">
+                              La IA rellena esto al analizar el PDF si consta con claridad en el texto; si no, escribí el
+                              órgano a mano.
+                            </FormDescription>
                             <FormMessage />
                             </FormItem>
                         )}
@@ -562,7 +680,12 @@ export function FalloForm({ initialData }: FalloFormProps) {
                         name="date"
                         render={({ field }) => (
                             <FormItem className="flex flex-col">
-                            <FormLabel>Fecha del Fallo</FormLabel>
+                            <FormLabel>Fecha del fallo</FormLabel>
+                            <FormDescription className="text-xs pb-1">
+                              Debe ser la de la resolución en el documento, no el día de subida. Tras “Extraer texto y
+                              generar con IA” se sugiere la fecha de sentencia si el texto la indica; si no, elegí la
+                              fecha manualmente.
+                            </FormDescription>
                             <Popover>
                                 <PopoverTrigger asChild>
                                 <FormControl>

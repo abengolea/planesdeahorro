@@ -40,7 +40,7 @@ function AdminLoginCard() {
   }
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center p-6">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 md:px-8 py-10">
       <Link href="/" className="mb-8">
         <Logo />
       </Link>
@@ -112,7 +112,7 @@ function NotAdminCard({
   const auth = useAuth();
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center p-6">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 md:px-8 py-10">
       <Link href="/" className="mb-8">
         <Logo />
       </Link>

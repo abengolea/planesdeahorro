@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { collection, addDoc, orderBy, query, serverTimestamp } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { FirestorePermissionError } from '@/firebase/errors';
 import type { PortalChatMessage } from '@/lib/types';
 import type { Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -14,9 +15,31 @@ import { cn } from '@/lib/utils';
 
 const MAX_LEN = 8000;
 
+function permissionHint(error: Error, viewer: PortalChatViewer): string {
+  if (error instanceof FirestorePermissionError) {
+    return viewer === 'admin'
+      ? 'Firestore está rechazando la lectura de la subcolección portal_chat. Suele pasar si en la consola de Firebase todavía hay reglas viejas: esta subcolección necesita su propio bloque en firestore.rules (el del repo ya lo incluye). Publicá las reglas del proyecto, por ejemplo: firebase deploy --only firestore:rules.'
+      : 'No tenés permiso para ver el chat de este expediente. Tiene que estar vinculado a tu cuenta desde /mi-caso/activar con el mismo correo de la consulta.';
+  }
+  return error.message;
+}
+
 function formatTs(ts: Timestamp | undefined): string {
   if (!ts || typeof ts.toDate !== 'function') return '';
   return ts.toDate().toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function messageRoleLabel(
+  m: PortalChatMessage,
+  viewer: PortalChatViewer,
+  userUid: string | undefined,
+): string {
+  const fromClient = m.authorRole === 'client';
+  const mine = m.authorUid === userUid;
+  if (fromClient) {
+    return viewer === 'client' && mine ? 'Vos' : 'Cliente';
+  }
+  return viewer === 'admin' && mine ? 'Vos (estudio)' : 'Estudio';
 }
 
 export type PortalChatViewer = 'client' | 'admin';
@@ -36,7 +59,9 @@ export function PortalChatThread({
   const { toast } = useToast();
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [liveAnnouncement, setLiveAnnouncement] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const prevLenRef = useRef(0);
 
   const chatQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -46,10 +71,31 @@ export function PortalChatThread({
     );
   }, [firestore, caseId]);
 
-  const { data: messages, isLoading, error } = useCollection<PortalChatMessage>(chatQuery);
+  const { data: messages, isLoading, error } = useCollection<PortalChatMessage>(chatQuery, {
+    // El chat puede fallar por cuenta/expediente desalineados; no tumbar toda la app vía global-error.
+    emitGlobalPermissionError: false,
+  });
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const len = messages?.length ?? 0;
+    if (len === 0) {
+      prevLenRef.current = 0;
+      return;
+    }
+    if (len > prevLenRef.current && messages) {
+      const last = messages[len - 1];
+      const who = messageRoleLabel(last, viewer, user?.uid);
+      const snippet = last.text.length > 240 ? `${last.text.slice(0, 240)}…` : last.text;
+      setLiveAnnouncement(`${who}: ${snippet}`);
+    }
+    prevLenRef.current = len;
+  }, [messages, viewer, user?.uid]);
+
+  useEffect(() => {
+    const reduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    bottomRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' });
   }, [messages?.length]);
 
   async function send() {
@@ -89,35 +135,31 @@ export function PortalChatThread({
 
   return (
     <div className={cn('rounded-lg border bg-card text-card-foreground flex flex-col', className)}>
-      <div className="px-4 py-3 border-b">
-        <h3 className="text-sm font-semibold text-primary">{title}</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {liveAnnouncement}
+      </p>
+      <div className="px-5 py-4 border-b">
+        <h2 className="text-lg font-semibold text-primary tracking-tight">{title}</h2>
+        <p className="text-sm text-muted-foreground mt-1.5 leading-snug">{subtitle}</p>
       </div>
 
-      <ScrollArea className="min-h-[280px] max-h-[420px] px-4 py-3">
+      <ScrollArea className="min-h-[300px] max-h-[480px] px-5 py-4">
         {error ? (
-          <p className="text-sm text-destructive">{error.message}</p>
+          <p className="text-base text-destructive leading-relaxed">{permissionHint(error, viewer)}</p>
         ) : isLoading ? (
-          <div className="flex justify-center py-8 text-muted-foreground">
-            <Loader2 className="h-6 w-6 animate-spin" />
+          <div className="flex justify-center py-8 text-muted-foreground motion-reduce:animate-none">
+            <Loader2 className="h-6 w-6 animate-spin motion-reduce:animate-none" aria-hidden />
+            <span className="sr-only">Cargando mensajes</span>
           </div>
         ) : !messages?.length ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">
+          <p className="text-base text-muted-foreground py-8 text-center leading-relaxed">
             Todavía no hay mensajes. {viewer === 'client' ? 'Podés iniciar la conversación.' : null}
           </p>
         ) : (
-          <ul className="space-y-3 pr-2">
+          <ul className="space-y-4 pr-2" aria-label="Historial de mensajes">
             {messages.map((m) => {
               const fromClient = m.authorRole === 'client';
-              const mine = m.authorUid === user?.uid;
-              const who =
-                fromClient
-                  ? viewer === 'client' && mine
-                    ? 'Vos'
-                    : 'Cliente'
-                  : viewer === 'admin' && mine
-                    ? 'Vos (estudio)'
-                    : 'Estudio';
+              const who = messageRoleLabel(m, viewer, user?.uid);
               return (
                 <li
                   key={m.id}
@@ -128,13 +170,13 @@ export function PortalChatThread({
                 >
                   <div
                     className={cn(
-                      'max-w-[85%] rounded-lg px-3 py-2 text-sm shadow-sm',
+                      'max-w-[85%] rounded-lg px-4 py-2.5 text-base shadow-sm leading-relaxed',
                       fromClient
                         ? 'bg-muted text-foreground rounded-tl-sm'
-                        : 'bg-primary text-primary-foreground rounded-tr-sm',
+                        : 'bg-brand text-brand-foreground rounded-tr-sm',
                     )}
                   >
-                    <p className="text-[10px] uppercase tracking-wide opacity-80 mb-1">
+                    <p className="text-xs uppercase tracking-wide opacity-80 mb-1.5 font-medium">
                       {who}
                       {formatTs(m.createdAt) ? ` · ${formatTs(m.createdAt)}` : ''}
                     </p>
@@ -148,15 +190,16 @@ export function PortalChatThread({
         )}
       </ScrollArea>
 
-      <div className="p-3 border-t flex flex-col gap-2 sm:flex-row sm:items-end">
+      <div className="p-4 border-t flex flex-col gap-3 sm:flex-row sm:items-end">
         <Textarea
           placeholder={viewer === 'client' ? 'Escribí tu mensaje…' : 'Respuesta al cliente…'}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           rows={3}
           maxLength={MAX_LEN}
-          className="min-h-[72px] resize-none sm:flex-1"
+          className="min-h-[88px] resize-none sm:flex-1 text-base"
           disabled={!user || sending}
+          aria-label={viewer === 'client' ? 'Mensaje' : 'Respuesta al cliente'}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
               e.preventDefault();
@@ -164,12 +207,18 @@ export function PortalChatThread({
             }
           }}
         />
-        <Button type="button" onClick={() => void send()} disabled={!user || sending || !draft.trim()}>
-          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizonal className="h-4 w-4" />}
+        <Button
+          type="button"
+          size="default"
+          className="shrink-0"
+          onClick={() => void send()}
+          disabled={!user || sending || !draft.trim()}
+        >
+          {sending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <SendHorizonal className="h-4 w-4" aria-hidden />}
           <span className="ml-2 hidden sm:inline">Enviar</span>
         </Button>
       </div>
-      <p className="px-3 pb-2 text-[10px] text-muted-foreground">
+      <p className="px-4 pb-3 text-xs text-muted-foreground">
         Ctrl+Enter o ⌘+Enter para enviar · {draft.length}/{MAX_LEN}
       </p>
     </div>

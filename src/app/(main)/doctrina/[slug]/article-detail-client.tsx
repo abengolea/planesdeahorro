@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Tag, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import ReactMarkdown from 'react-markdown';
+import { siteContainer, siteContentSection } from '@/lib/site-layout';
 
 type ArticleDetailClientProps = {
   /** Cargado en el servidor (Admin); evita el índice compuesto en el cliente. */
@@ -45,8 +46,8 @@ export function ArticleDetailClient({
 
   if (isLoading) {
     return (
-      <div className="bg-card py-12 md:py-20">
-        <div className="container mx-auto px-4 max-w-4xl">
+      <div className={`bg-background ${siteContentSection}`}>
+        <div className={`${siteContainer} max-w-4xl`}>
           <Skeleton className="h-10 w-3/4 mb-4" />
           <Skeleton className="h-6 w-1/2 mb-6" />
           <div className="space-y-4 mt-8">
@@ -61,11 +62,11 @@ export function ArticleDetailClient({
 
   if (fromDb) {
     return (
-      <div className="bg-card py-12 md:py-20">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <article className="prose lg:prose-xl max-w-none dark:prose-invert prose-headings:font-body prose-headings:text-primary [&_h1]:font-body [&_h2]:font-body [&_h3]:font-body [&_h4]:font-body">
+      <div className={`bg-background ${siteContentSection}`}>
+        <div className={`${siteContainer} max-w-4xl`}>
+          <article className="prose lg:prose-xl max-w-none dark:prose-invert prose-headings:font-headline prose-headings:text-primary [&_h1]:font-headline [&_h2]:font-headline [&_h3]:font-headline [&_h4]:font-headline">
             <div className="mb-8">
-              <h1 className="font-body text-3xl md:text-4xl font-bold text-primary mb-4 tracking-tight">{fromDb.title}</h1>
+              <h1 className="font-headline text-3xl md:text-4xl font-bold text-primary mb-4 tracking-tight not-prose">{fromDb.title}</h1>
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground not-prose">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />
@@ -124,7 +125,7 @@ export function ArticleDetailClient({
                 </p>
               </div>
             ) : (
-              <div className="mt-8 prose-lg max-w-none dark:prose-invert prose-headings:font-body prose-headings:text-primary [&_h1]:font-body [&_h2]:font-body [&_h3]:font-body [&_h4]:font-body">
+              <div className="mt-8 prose-lg max-w-none dark:prose-invert prose-headings:font-headline prose-headings:text-primary [&_h1]:font-headline [&_h2]:font-headline [&_h3]:font-headline [&_h4]:font-headline">
                 <ReactMarkdown>{fromDb.content}</ReactMarkdown>
               </div>
             )}
@@ -142,11 +143,11 @@ export function ArticleDetailClient({
 
   if (staticArticle) {
     return (
-      <div className="bg-card py-12 md:py-20">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <article className="prose lg:prose-xl max-w-none dark:prose-invert prose-headings:font-body prose-headings:text-primary [&_h1]:font-body [&_h2]:font-body [&_h3]:font-body [&_h4]:font-body">
+      <div className={`bg-background ${siteContentSection}`}>
+        <div className={`${siteContainer} max-w-4xl`}>
+          <article className="prose lg:prose-xl max-w-none dark:prose-invert prose-headings:font-headline prose-headings:text-primary [&_h1]:font-headline [&_h2]:font-headline [&_h3]:font-headline [&_h4]:font-headline">
             <div className="mb-8">
-              <h1 className="font-body text-3xl md:text-4xl font-bold text-primary mb-4 tracking-tight">{staticArticle.title}</h1>
+              <h1 className="font-headline text-3xl md:text-4xl font-bold text-primary mb-4 tracking-tight not-prose">{staticArticle.title}</h1>
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />

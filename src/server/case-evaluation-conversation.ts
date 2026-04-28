@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { evaluateCase, type ConversationOutput } from '@/ai/flows/case-evaluation-flow';
+import { expandNumericQuickReplyChoice } from '@/lib/whatsapp-inbound';
 import type { ChatMessage, CaseEvaluation, KnowledgeDoc } from '@/lib/types';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/firebase/admin';
@@ -110,15 +111,17 @@ export async function processCaseEvaluationConversation(
   sessionId?: string,
   options?: ProcessCaseEvaluationOptions
 ): Promise<ChatMessage> {
+  const historyForModel = expandNumericQuickReplyChoice(history);
+
   if (sessionId) {
-    savePartialSession(sessionId, history).catch(() => {});
+    savePartialSession(sessionId, historyForModel).catch(() => {});
   }
 
   const knowledgeContext = await fetchKnowledgeContext();
   const channel = options?.channel ?? 'web';
 
   try {
-    const assistantOutput: ConversationOutput = await evaluateCase(history, knowledgeContext);
+    const assistantOutput: ConversationOutput = await evaluateCase(historyForModel, knowledgeContext);
 
     if (assistantOutput.isFinished && assistantOutput.structuredData) {
       const caseData = assistantOutput.structuredData as CaseEvaluation;

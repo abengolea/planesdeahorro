@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { siteContainer, siteContentSection, sitePageHeader } from '@/lib/site-layout';
 
 export const metadata: Metadata = {
   title: 'Términos y Condiciones de Uso',
@@ -11,19 +12,26 @@ const lastUpdated = '19 de abril de 2026';
 
 export default function TerminosPage() {
   return (
-    <div className="bg-background">
-      <div className="container mx-auto px-4 py-16 md:py-20">
-        <div className="max-w-3xl mx-auto">
-          <p className="text-sm text-muted-foreground">Última actualización: {lastUpdated}</p>
-          <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary mt-2">
+    <div className="flex flex-col">
+      <div className={`bg-brand text-brand-foreground ${sitePageHeader} relative overflow-hidden`}>
+        <div className="absolute left-0 top-0 w-[3px] h-full bg-accent hidden md:block" />
+        <div className={siteContainer}>
+          <p className="text-accent text-[11px] font-medium tracking-[0.3em] uppercase mb-3">Legal</p>
+          <h1 className="font-headline text-4xl md:text-5xl font-bold leading-[1.05] max-w-3xl">
             Términos y Condiciones de Uso
           </h1>
-          <p className="mt-4 text-lg text-muted-foreground">
+          <div className="w-12 h-[2px] bg-accent mt-6" />
+          <p className="text-white/60 text-sm mt-6">Última actualización: {lastUpdated}</p>
+          <p className="text-white/70 mt-4 max-w-2xl text-base leading-relaxed">
             Al acceder y utilizar este sitio web, usted acepta estos términos. Si no está de acuerdo, le solicitamos
             que no utilice el sitio.
           </p>
+        </div>
+      </div>
 
-          <div className="prose prose-neutral dark:prose-invert max-w-none mt-10">
+      <div className={`bg-background ${siteContentSection}`}>
+        <div className={`${siteContainer} max-w-3xl`}>
+          <div className="prose prose-neutral dark:prose-invert max-w-none">
             <h2 className="font-headline text-xl md:text-2xl text-foreground">1. Titular del sitio</h2>
             <p>
               El sitio web <strong>Dr. Adrián Bengolea – Reclamos por planes de ahorro</strong> es operado con fines

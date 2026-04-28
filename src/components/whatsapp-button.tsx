@@ -17,40 +17,88 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const DEFAULT_PREFILL =
   'Hola, quiero consultar por Planes de Ahorro - Dr. Bengolea.';
 
-/** Línea de contacto (336… → 549… para wa.me). Sobreescribible con NEXT_PUBLIC_WHATSAPP_NUMBER. */
-const DEFAULT_WHATSAPP_E164 = '5493364513355';
+/**
+ * Línea de contacto (Argentina): 10 dígitos locales; para wa.me hace falta `549` + estos dígitos.
+ * Sobreescribible con `NEXT_PUBLIC_WHATSAPP_NUMBER` (acepta 5493364513355 o solo 3364513355).
+ */
+export const WHATSAPP_LOCAL_CONTACT_DIGITS = '3364513355';
+
+const DEFAULT_WHATSAPP_E164 = `549${WHATSAPP_LOCAL_CONTACT_DIGITS}`;
 
 function digitsOnlyPhone(raw: string): string {
   return raw.replace(/\D/g, '').replace(/^0+/, '');
 }
 
-/** Botón flotante: número vía NEXT_PUBLIC_WHATSAPP_NUMBER (solo dígitos, ej. 54911…). */
+/**
+ * Normaliza a E.164 sin + para wa.me (`549` + 10 dígitos = 13 en total para móvil AR).
+ *
+ * WhatsApp muestra errores tipo "+54 … no está en WhatsApp" si el link queda **truncado** (pasó con
+ * `54933645133`: faltaban los dígitos `55` al pegar una variable mal). Si el valor es prefijo incompleto
+ * del número canónico del estudio, se completa.
+ */
+function normalizeArgentinaWhatsappWaMeDigits(digits: string): string {
+  const canonical = DEFAULT_WHATSAPP_E164;
+  const okArgentinaMobileWaMe = /^549\d{10}$/;
+  if (!digits) return canonical;
+  if (okArgentinaMobileWaMe.test(digits)) return digits;
+  /** 3364513355 → 5493364513355 */
+  if (/^\d{10}$/.test(digits) && !digits.startsWith('54')) {
+    return `549${digits}`;
+  }
+  /** Truncamiento al pegar ENV (54933645133 → completar hasta 5493364513355). Pedimos ≥11 dígitos por si coincide el prefijo. */
+  if (
+    canonical.startsWith(digits) &&
+    digits.startsWith('549') &&
+    digits.length >= 11 &&
+    digits.length < canonical.length
+  ) {
+    return canonical;
+  }
+  return digits;
+}
+
+/** Formato de lectura acordado: +54 9 3364 51-3355 (mismos dígitos que wa.me/5493364513355). */
+function formatWhatsappAriaLabel(e164digits: string): string {
+  const d = normalizeArgentinaWhatsappWaMeDigits(e164digits);
+  if (d.startsWith('549') && d.length === 13) {
+    const after54 = d.slice(3); // 93364513355 — 9 + 10 dígitos locales
+    const local = after54.slice(1); // 3364513355
+    const a = local.slice(0, 4);
+    const b = local.slice(4, 6);
+    const c = local.slice(6);
+    return `WhatsApp al estudio: +54 9 ${a} ${b}-${c}`;
+  }
+  return `WhatsApp: +${d}`;
+}
+
+/** Botón flotante: número vía NEXT_PUBLIC_WHATSAPP_NUMBER (solo dígitos, ej. 5493364513355 o 3364513355). */
 export function WhatsAppButton() {
   const raw =
     process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.trim() ||
     process.env.NEXT_PUBLIC_WHATSAPP_PHONE?.trim() ||
     DEFAULT_WHATSAPP_E164;
-  const phoneNumber = digitsOnlyPhone(raw);
+  const phoneNumber = normalizeArgentinaWhatsappWaMeDigits(digitsOnlyPhone(raw));
   const message =
     process.env.NEXT_PUBLIC_WHATSAPP_PREFILL?.trim() || DEFAULT_PREFILL;
 
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+  const aria = formatWhatsappAriaLabel(phoneNumber);
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
       <Button
         asChild
         size="lg"
-        className="h-14 w-14 sm:h-16 sm:w-16 rounded-full shadow-lg bg-[#25D366] hover:bg-[#128C7E] text-white p-0"
+        className="h-14 w-14 sm:h-16 sm:w-16 rounded-full shadow-lg bg-[hsl(var(--whatsapp))] hover:bg-[hsl(var(--whatsapp-hover))] text-white p-0"
       >
         <a
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Abrir WhatsApp para escribir al estudio"
+          title={aria}
+          aria-label={aria}
         >
           <WhatsAppIcon className="h-7 w-7 sm:h-8 sm:w-8" />
-          <span className="sr-only">Contactar por WhatsApp</span>
         </a>
       </Button>
     </div>

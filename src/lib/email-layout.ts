@@ -72,7 +72,7 @@ export function wrapEmailHtml(
                   <td style="width:3px;background:${EMAIL_THEME.accent};border-radius:1px;font-size:0;line-height:0;">&nbsp;</td>
                   <td style="padding-left:14px;">
                     <div style="font-family:${fontHeadline};font-size:20px;font-weight:700;color:${EMAIL_THEME.primary};line-height:1.2;">Dr. Adrián Bengolea</div>
-                    <div style="font-family:${fontBody};font-size:13px;font-weight:500;color:${EMAIL_THEME.muted};margin-top:6px;line-height:1.4;">Abogado — Especialista en Planes de Ahorro</div>
+                    <div style="font-family:${fontBody};font-size:13px;font-weight:500;color:${EMAIL_THEME.muted};margin-top:6px;line-height:1.4;">Abogado — Especialista en Derecho del Consumidor</div>
                     <div style="font-family:${fontBody};font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${EMAIL_THEME.subtle};margin-top:8px;">Reclamos por planes de ahorro</div>
                   </td>
                 </tr>

@@ -9,6 +9,10 @@ import { z } from 'genkit';
 
 const SummarizeDoctrineDocumentInputSchema = z.object({
   documentText: z.string().describe('Texto extraído del documento de doctrina (p. ej. desde PDF).'),
+  siteKnowledgeContext: z
+    .string()
+    .optional()
+    .describe('Fallos y doctrina del sitio como referencia de línea; no reemplaza el documento a sintetizar.'),
 });
 export type SummarizeDoctrineDocumentInput = z.infer<typeof SummarizeDoctrineDocumentInputSchema>;
 
@@ -37,7 +41,8 @@ export type SummarizeDoctrineDocumentOutput = z.infer<typeof SummarizeDoctrineDo
 export async function summarizeDoctrineDocument(
   input: SummarizeDoctrineDocumentInput
 ): Promise<SummarizeDoctrineDocumentOutput> {
-  return summarizeDoctrineDocumentFlow(input);
+  const siteKnowledgeContext = (input.siteKnowledgeContext ?? '').trim();
+  return summarizeDoctrineDocumentFlow({ ...input, siteKnowledgeContext });
 }
 
 const doctrinePrompt = ai.definePrompt({
@@ -46,6 +51,12 @@ const doctrinePrompt = ai.definePrompt({
   output: { schema: SummarizeDoctrineDocumentOutputSchema },
   prompt: `Sos un jurista especializado en planes de ahorro y derecho del consumo en Argentina.
 El texto siguiente fue extraído de un PDF (puede tener saltos de línea raros o encabezados repetidos). Ignorá numeración de página suelta y basura de maquetado.
+
+**Material de referencia del estudio (puede ir vacío):** otros fallos y artículos de doctrina ya en el sitio. Usalo solo para alinear criterio y estilo; el contenido obligatorio a sintetizar es el **texto del documento** al final. No mezcles hechos ajenos al PDF con el cuerpo del artículo.
+
+{{{siteKnowledgeContext}}}
+
+---
 
 Tareas:
 1. **summary**: un párrafo introductorio breve para la ficha del artículo (listados / SEO).

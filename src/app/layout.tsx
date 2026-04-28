@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { EB_Garamond, Inter } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
-import { AppHeader } from '@/components/header';
+import { AppProviders } from '@/components/app-providers';
+import { ConditionalAppHeader } from '@/components/conditional-header';
 import { ConditionalFooter } from '@/components/conditional-footer';
+import { SkipLink } from '@/components/skip-link';
 import { ConditionalWhatsAppButton } from '@/components/whatsapp-button';
 import { FirebaseClientProvider } from '@/firebase';
 
@@ -38,15 +41,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={cn(inter.variable, ebGaramond.variable)}>
+    <html lang="es" className={cn(inter.variable, ebGaramond.variable)} suppressHydrationWarning>
       <body className={cn('font-body antialiased min-h-screen flex flex-col')}>
-        <FirebaseClientProvider>
-          <AppHeader />
-          <main className="flex-grow">{children}</main>
-          <ConditionalFooter />
-          <ConditionalWhatsAppButton />
-          <Toaster />
-        </FirebaseClientProvider>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=AW-18107912536"
+          strategy="afterInteractive"
+        />
+        <Script id="google-ads-gtag" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'AW-18107912536');
+          `}
+        </Script>
+        <AppProviders>
+          <FirebaseClientProvider>
+            <SkipLink />
+            <ConditionalAppHeader />
+            <main id="main" tabIndex={-1} className="flex-grow outline-none">
+              {children}
+            </main>
+            <ConditionalFooter />
+            <ConditionalWhatsAppButton />
+            <Toaster />
+          </FirebaseClientProvider>
+        </AppProviders>
       </body>
     </html>
   );

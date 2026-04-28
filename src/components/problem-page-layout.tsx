@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { siteContainer, siteContentSection, sitePageHeader } from '@/lib/site-layout';
 import { Button } from './ui/button';
 
 interface ProblemPageLayoutProps {
@@ -10,9 +11,9 @@ export function ProblemPageLayout({ title, children }: ProblemPageLayoutProps) {
   return (
     <div className="flex flex-col">
       {/* ── Page header ── */}
-      <div className="bg-primary text-primary-foreground py-14 md:py-20 relative overflow-hidden">
+      <div className={`bg-brand text-brand-foreground ${sitePageHeader} relative overflow-hidden`}>
         <div className="absolute left-0 top-0 w-[3px] h-full bg-accent hidden md:block" />
-        <div className="container mx-auto px-6 md:px-8">
+        <div className={siteContainer}>
           <p className="text-accent text-[11px] font-medium tracking-[0.3em] uppercase mb-3">
             Área de Práctica
           </p>
@@ -24,8 +25,8 @@ export function ProblemPageLayout({ title, children }: ProblemPageLayoutProps) {
       </div>
 
       {/* ── Content ── */}
-      <div className="bg-background py-14 md:py-20">
-        <div className="container mx-auto px-4">
+      <div className={`bg-background ${siteContentSection}`}>
+        <div className={siteContainer}>
           <div className="grid lg:grid-cols-3 gap-12 lg:gap-16">
 
             {/* Article */}

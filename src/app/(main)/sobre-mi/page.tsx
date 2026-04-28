@@ -1,28 +1,29 @@
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { siteContainer, siteContentSection, sitePageHeader } from '@/lib/site-layout';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Scale, FileText, Users } from 'lucide-react';
+import { Bot, FileText, Scale } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Sobre Mí — Dr. Adrián Bengolea',
   description:
-    'Conozca al Dr. Adrián Bengolea, abogado con dedicación exclusiva a reclamos por planes de ahorro en la Provincia de Buenos Aires.',
+    'Conozca al Dr. Adrián Bengolea, abogado especialista en derecho del consumidor, director de asociación de defensa y con amplia experiencia en litigio, doctrina y formación en la Provincia de Buenos Aires.',
 };
 
 const highlights = [
   {
     icon: Scale,
-    label: 'Especialización exclusiva en planes de ahorro',
+    label: 'Especialista en derecho del consumidor; dirección de asociación de defensa',
   },
   {
     icon: FileText,
-    label: 'Profundo conocimiento de jurisprudencia de la SCJBA',
+    label: 'Experiencia en litigio, doctrina, jurisprudencia y formación',
   },
   {
-    icon: Users,
-    label: 'Trato directo, sin intermediarios',
+    icon: Bot,
+    label: 'Herramientas digitales e IA para informar y agilizar, con criterio humano',
   },
 ];
 
@@ -32,9 +33,9 @@ export default function AboutPage() {
   return (
     <div className="flex flex-col">
       {/* ── Page header ── */}
-      <div className="bg-primary text-primary-foreground py-14 md:py-20 relative overflow-hidden">
+      <div className={`bg-brand text-brand-foreground ${sitePageHeader} relative overflow-hidden`}>
         <div className="absolute left-0 top-0 w-[3px] h-full bg-accent hidden md:block" />
-        <div className="container mx-auto px-6 md:px-8">
+        <div className={siteContainer}>
           <p className="text-accent text-[11px] font-medium tracking-[0.3em] uppercase mb-3">
             El Profesional
           </p>
@@ -42,15 +43,15 @@ export default function AboutPage() {
             Dr. Adrián Bengolea
           </h1>
           <p className="text-white/65 mt-3 text-lg font-medium">
-            Abogado — Especialista en Planes de Ahorro
+            Abogado — Especialista en Derecho del Consumidor
           </p>
           <div className="w-12 h-[2px] bg-accent mt-6" />
         </div>
       </div>
 
       {/* ── Content ── */}
-      <div className="bg-background py-16 md:py-24">
-        <div className="container mx-auto px-4">
+      <div className={`bg-background ${siteContentSection}`}>
+        <div className={siteContainer}>
           <div className="grid md:grid-cols-5 gap-10 md:gap-16 items-start">
 
             {/* Photo */}
@@ -92,10 +93,10 @@ export default function AboutPage() {
                 </p>
                 <h3>Especialización y Enfoque</h3>
                 <p>
-                  A diferencia de los estudios jurídicos generalistas, mi práctica está 100% dedicada a conflictos derivados de planes de ahorro. Esta ultra-especialización me permite estar al día con cada cambio normativo y cada nuevo fallo judicial, ofreciendo un servicio de la más alta calidad con un profundo conocimiento de las tácticas empleadas por las administradoras.
+                  Soy especialista en derecho del consumidor y director de una asociación de defensa del consumidor. Mi actividad abarca el litigio, la difusión de la doctrina y la formación, con vasta experiencia en conflictos vinculados a contratos de consumo, incluidos los planes de ahorro, sin centrar allí el ciento por ciento de mi ejercicio. Esa visión integral del consumo y el estudio continuo de la normativa y la jurisprudencia me permiten abordar estos reclamos con criterio actualizado y con conocimiento de las prácticas de las administradoras.
                 </p>
                 <p>
-                  Creo en un trato directo y transparente. Cada cliente habla directamente conmigo, y cada caso es tratado con la dedicación y la seriedad que merece.
+                  Creo en la transparencia y en informar con claridad. No me comprometo a que, en el cien por ciento de los asuntos, la comunicación sea de manera exclusiva conmigo: según el caso, pueden intervenir otras personas o canales, siempre bajo criterio profesional y con la confidencialidad que exige el vínculo con el cliente. Complemento el trabajo con herramientas digitales, incluida la inteligencia artificial, para acercarle información útil, preparar con mayor celeridad la documentación y alinear el planteo de su reclamo con el ritmo y la celeridad que el proceso permite, bajo control humano y con la seriedad que cada caso requiere.
                 </p>
               </div>
 

@@ -30,7 +30,7 @@ const footerSections = [
 
 export function AppFooter() {
   return (
-    <footer className="bg-primary text-primary-foreground border-t border-white/10">
+    <footer className="bg-brand text-brand-foreground border-t border-white/10">
       <div className="container mx-auto px-4 py-14 md:py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-10">
           <div className="col-span-2 lg:col-span-2 flex flex-col">

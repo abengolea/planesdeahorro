@@ -60,7 +60,7 @@ export function AiToolsClient() {
         <CardHeader>
           <CardTitle>Resumidor de Fallos</CardTitle>
           <CardDescription>
-            Pegue el texto completo de un fallo judicial para generar un resumen conciso y objetivo.
+            Pegá el texto del fallo. La IA toma además de referencia el material reciente de Fallos y Doctrina del admin.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -106,7 +106,7 @@ export function AiToolsClient() {
         <CardHeader>
           <CardTitle>Borrador de Artículo de Doctrina</CardTitle>
           <CardDescription>
-            Ingrese un tema o palabras clave para generar un esquema detallado para un nuevo artículo.
+            Tema o palabras clave. El esquema se alinea con la línea de los artículos y fallos que ya tenés en el sitio.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

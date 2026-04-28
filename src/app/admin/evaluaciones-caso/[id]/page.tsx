@@ -20,6 +20,8 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { siteContainer, siteAdminY } from '@/lib/site-layout';
+import { cn } from '@/lib/utils';
 
 function formatCreatedAt(ts: Timestamp | undefined): string {
   if (!ts || typeof ts.toDate !== 'function') return '—';
@@ -34,9 +36,9 @@ function urgenciaVariant(u: string): 'default' | 'secondary' | 'destructive' | '
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <div className="text-sm">{children}</div>
+    <div className="space-y-1.5">
+      <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <div className="text-base leading-relaxed">{children}</div>
     </div>
   );
 }
@@ -88,8 +90,8 @@ export default function EvaluacionCasoDetallePage() {
   }, [row?.id, row?.newForAdmin, user]);
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className={cn(siteContainer, siteAdminY)}>
+      <div className="max-w-3xl mx-auto w-full space-y-6">
         <div className="flex flex-wrap items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/admin/evaluaciones-caso">
@@ -121,7 +123,7 @@ export default function EvaluacionCasoDetallePage() {
           <>
             <div>
               <h1 className="font-headline text-3xl md:text-4xl text-primary">Evaluación de caso</h1>
-              <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2">
+              <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-base">
                 <span>Recibida el {formatCreatedAt(row.createdAt)}</span>
                 {row.status ? <Badge variant="outline">{formatCaseEvaluationStatus(row.status)}</Badge> : null}
                 {row.archived ? (
@@ -130,13 +132,13 @@ export default function EvaluacionCasoDetallePage() {
                   </Badge>
                 ) : null}
               </div>
-              <p className="text-xs text-muted-foreground mt-2 font-mono">ID: {row.id}</p>
+              <p className="text-sm text-muted-foreground mt-2 font-mono">ID: {row.id}</p>
             </div>
 
             <Card>
               <CardHeader>
                 <CardTitle>Datos del cliente</CardTitle>
-                <CardDescription>Contacto y ubicación</CardDescription>
+                <CardDescription className="text-base leading-relaxed">Contacto y ubicación</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 <Field label="Nombre">{row.nombre || '—'}</Field>
@@ -151,16 +153,16 @@ export default function EvaluacionCasoDetallePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Portal del cliente</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-base leading-relaxed">
                   Acceso web a movimientos y documentación (tras aceptar el caso y enviar el correo con enlace).
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-2 text-base leading-relaxed">
                 {row.clientPortalUid ? (
                   <>
                     <p>
                       <span className="text-muted-foreground">Cuenta vinculada (UID):</span>{' '}
-                      <span className="font-mono text-xs break-all">{row.clientPortalUid}</span>
+                      <span className="font-mono text-sm break-all">{row.clientPortalUid}</span>
                     </p>
                     <p className="text-muted-foreground">
                       Vinculado el {formatCreatedAt(row.clientPortalLinkedAt)}
@@ -169,7 +171,7 @@ export default function EvaluacionCasoDetallePage() {
                 ) : (
                   <p className="text-muted-foreground">
                     Aún no activó el portal. Al marcar el caso como aceptado y enviar el correo, recibe un enlace
-                    a <span className="font-mono text-xs">/mi-caso/activar</span>.
+                    a <span className="font-mono text-sm">/mi-caso/activar</span>.
                   </p>
                 )}
               </CardContent>
@@ -211,7 +213,7 @@ export default function EvaluacionCasoDetallePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2 items-center">
-                  <span className="text-xs font-medium uppercase text-muted-foreground">Urgencia</span>
+                  <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Urgencia</span>
                   <Badge variant={urgenciaVariant(row.urgencia)} className="capitalize">
                     {row.urgencia || '—'}
                   </Badge>

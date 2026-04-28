@@ -132,8 +132,10 @@ service cloud.firestore {
        * Chat interno entre cliente (portal) y administradores.
        */
       match /portal_chat/{msgId} {
-        function caseEval() {
-          return get(/databases/$(database)/documents/case_evaluations/$(caseEvaluationId));
+        /** `get()` devuelve null si el expediente no existe; hay que acortar circuito antes de leer `.data`. */
+        function clientOwnsCaseEvaluation() {
+          let ev = get(/databases/$(database)/documents/case_evaluations/$(caseEvaluationId));
+          return ev != null && ev.data.clientPortalUid == request.auth.uid;
         }
 
         function portalChatPayloadOk() {
@@ -161,11 +163,7 @@ service cloud.firestore {
             );
         }
 
-        allow read: if isAdmin()
-          || (
-            isSignedIn()
-            && caseEval().data.clientPortalUid == request.auth.uid
-          );
+        allow get, list: if isAdmin() || (isSignedIn() && clientOwnsCaseEvaluation());
 
         allow create: if portalChatPayloadOk()
           && (
@@ -175,7 +173,7 @@ service cloud.firestore {
             )
             || (
               isSignedIn()
-              && caseEval().data.clientPortalUid == request.auth.uid
+              && clientOwnsCaseEvaluation()
               && request.resource.data.authorRole == 'client'
             )
           );

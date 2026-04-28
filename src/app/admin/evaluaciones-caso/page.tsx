@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, orderBy, query } from 'firebase/firestore';
 import type { CaseEvaluationSubmission } from '@/lib/types';
@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CASE_EVALUATION_STATUSES, formatCaseEvaluationStatus } from '@/lib/case-evaluation-status';
+import { siteContainer, siteAdminY } from '@/lib/site-layout';
+import { cn } from '@/lib/utils';
 
 function formatCreatedAt(ts: Timestamp | undefined): string {
   if (!ts || typeof ts.toDate !== 'function') return '—';
@@ -64,6 +66,7 @@ function EvaluacionesSkeleton() {
 }
 
 export default function EvaluacionesCasoPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const firestore = useFirestore();
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -125,7 +128,7 @@ export default function EvaluacionesCasoPage() {
   }, [rows, statusFilter, urgencyFilter, archiveFilter, readFilter, search]);
 
   return (
-    <div className="p-4 md:p-8">
+    <div className={cn(siteContainer, siteAdminY)}>
       <div className="mb-8">
         <h1 className="font-headline text-3xl md:text-4xl text-primary">Evaluaciones de caso</h1>
         <p className="text-muted-foreground">
@@ -240,7 +243,14 @@ export default function EvaluacionesCasoPage() {
               </TableHeader>
               <TableBody>
                 {filteredRows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow
+                    key={row.id}
+                    className="cursor-pointer [&>td]:cursor-pointer [&>td:last-child]:cursor-default"
+                    title="Ver detalle del caso"
+                    onClick={() => {
+                      router.push(`/admin/evaluaciones-caso/${row.id}`);
+                    }}
+                  >
                     <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
                       {formatCreatedAt(row.createdAt)}
                     </TableCell>
@@ -280,7 +290,10 @@ export default function EvaluacionesCasoPage() {
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <CaseEvaluationRowActions row={row} />
                     </TableCell>
                   </TableRow>

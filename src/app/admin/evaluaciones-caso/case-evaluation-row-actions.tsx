@@ -94,7 +94,7 @@ export function CaseEvaluationRowActions({ row }: { row: Row }) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 cursor-pointer"
             aria-label={`Acciones para ${row.nombre || row.id}`}
             disabled={busy !== null}
           >

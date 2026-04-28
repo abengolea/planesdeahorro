@@ -18,6 +18,10 @@ const DraftDoctrineArticleOutlineInputSchema = z.object({
     .describe(
       'The topic or keywords for the legal doctrine article for which an outline is to be generated.'
     ),
+  siteKnowledgeContext: z
+    .string()
+    .optional()
+    .describe('Fallos y doctrina ya cargados en el sitio para alinear criterio y estructura.'),
 });
 export type DraftDoctrineArticleOutlineInput = z.infer<
   typeof DraftDoctrineArticleOutlineInputSchema
@@ -35,7 +39,8 @@ export type DraftDoctrineArticleOutlineOutput = z.infer<
 export async function draftDoctrineArticleOutline(
   input: DraftDoctrineArticleOutlineInput
 ): Promise<DraftDoctrineArticleOutlineOutput> {
-  return draftDoctrineArticleOutlineFlow(input);
+  const siteKnowledgeContext = (input.siteKnowledgeContext ?? '').trim();
+  return draftDoctrineArticleOutlineFlow({ ...input, siteKnowledgeContext });
 }
 
 const draftDoctrineArticleOutlinePrompt = ai.definePrompt({
@@ -45,9 +50,16 @@ const draftDoctrineArticleOutlinePrompt = ai.definePrompt({
   prompt: `Eres un asistente experto en derecho y redacción jurídica. Tu tarea es crear un esquema detallado y coherente para un artículo de doctrina legal.
 El esquema debe ser completo, bien estructurado y relevante para el tema o las palabras clave proporcionadas. Incluye secciones y subsecciones lógicas, como introducción, desarrollo de puntos clave, análisis de jurisprudencia (si aplica), conclusiones y posibles referencias.
 
-Formatea el esquema utilizando markdown, con encabezados y listas para una fácil lectura.
+Si el material siguiente no está vacío, tenélo en cuenta para alinear voz, profundidad y conexión con el material ya publicado o en carga en el estudio; evitá repetir títulos o ideas ya agotadas salvo que el tema lo exija, y proponé enlaces lógicos con esos frentes.
 
-Tema o Palabras Clave: {{{topicOrKeywords}}}`,
+**Material de referencia (fallos y doctrina en el sitio; puede ir vacío):**
+{{{siteKnowledgeContext}}}
+
+---
+
+Tema o Palabras Clave: {{{topicOrKeywords}}}
+
+Formatea el esquema utilizando markdown, con encabezados y listas para una fácil lectura.`,
 });
 
 const draftDoctrineArticleOutlineFlow = ai.defineFlow(

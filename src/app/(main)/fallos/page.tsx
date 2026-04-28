@@ -6,6 +6,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { Fallo } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { siteContainer, siteContentSection, sitePageHeader } from '@/lib/site-layout';
 
 function FalloCardSkeleton() {
   return (
@@ -40,9 +41,9 @@ export default function RulingsPage() {
   return (
     <div className="flex flex-col">
       {/* ── Page header ── */}
-      <div className="bg-primary text-primary-foreground py-14 md:py-20 relative overflow-hidden">
+      <div className={`bg-brand text-brand-foreground ${sitePageHeader} relative overflow-hidden`}>
         <div className="absolute left-0 top-0 w-[3px] h-full bg-accent hidden md:block" />
-        <div className="container mx-auto px-6 md:px-8">
+        <div className={siteContainer}>
           <p className="text-accent text-[11px] font-medium tracking-[0.3em] uppercase mb-3">
             Jurisprudencia
           </p>
@@ -57,8 +58,8 @@ export default function RulingsPage() {
       </div>
 
       {/* ── Grid ── */}
-      <div className="bg-background py-14 md:py-20">
-        <div className="container mx-auto px-4">
+      <div className={`bg-background ${siteContentSection}`}>
+        <div className={siteContainer}>
 
           {error && (
             <div className="border border-destructive/30 bg-destructive/5 p-8 text-center rounded-sm">

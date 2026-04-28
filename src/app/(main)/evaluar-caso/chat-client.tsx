@@ -117,15 +117,15 @@ export function ChatClient() {
         <div className='flex items-center gap-3'>
             <div className="relative">
                 <Avatar>
-                    <AvatarFallback className="bg-primary text-primary-foreground">
+                    <AvatarFallback className="bg-brand text-brand-foreground">
                     <Bot />
                     </AvatarFallback>
                 </Avatar>
                 <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-card" />
             </div>
             <div>
-                <p className="font-bold text-lg">Juris-IA</p>
-                <p className="text-sm text-muted-foreground">Asistente Virtual</p>
+                <p className="font-bold text-lg">Asistente Virtual</p>
+                <p className="text-sm text-muted-foreground">Estudio Dr. Adrián Bengolea</p>
             </div>
         </div>
         <Button variant="ghost" size="icon" onClick={handleReset} aria-label="Reiniciar conversación">
@@ -145,7 +145,7 @@ export function ChatClient() {
               >
                 {m.role === 'assistant' && (
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
+                    <AvatarFallback className="bg-brand text-brand-foreground">
                       <Bot className="h-5 w-5" />
                     </AvatarFallback>
                   </Avatar>
@@ -154,7 +154,7 @@ export function ChatClient() {
                   className={cn(
                     'max-w-md rounded-xl px-4 py-3 text-sm md:text-base shadow-md',
                     m.role === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-br-none'
+                      ? 'bg-brand text-brand-foreground rounded-br-none'
                       : 'bg-muted text-foreground rounded-bl-none'
                   )}
                 >
@@ -178,14 +178,14 @@ export function ChatClient() {
              {isPending && (
               <div className="flex items-end gap-3 justify-start">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
+                  <AvatarFallback className="bg-brand text-brand-foreground">
                     <Bot className="h-5 w-5" />
                   </AvatarFallback>
                 </Avatar>
                 <div className="max-w-md rounded-xl px-4 py-3 shadow-md bg-muted text-foreground rounded-bl-none flex items-center gap-2">
-                  <span className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                  <span className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                  <span className="h-2 w-2 bg-primary rounded-full animate-bounce"></span>
+                  <span className="h-2 w-2 bg-brand rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                  <span className="h-2 w-2 bg-brand rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                  <span className="h-2 w-2 bg-brand rounded-full animate-bounce"></span>
                 </div>
               </div>
             )}

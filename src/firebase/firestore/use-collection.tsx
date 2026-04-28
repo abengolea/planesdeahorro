@@ -25,6 +25,11 @@ export interface UseCollectionResult<T> {
   error: FirestoreError | Error | null; // Error object, or null.
 }
 
+/** Opciones del hook; por defecto los `permission-denied` también disparan el listener global. */
+export type UseCollectionOptions = {
+  emitGlobalPermissionError?: boolean;
+};
+
 /* Internal implementation of Query:
   https://github.com/firebase/firebase-js-sdk/blob/c5f08a9bc5da0d2b0207802c972d53724ccef055/packages/firestore/src/lite-api/reference.ts#L143
 */
@@ -53,7 +58,9 @@ export interface InternalQuery extends Query<DocumentData> {
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
+    options?: UseCollectionOptions,
 ): UseCollectionResult<T> {
+  const emitGlobalPermissionError = options?.emitGlobalPermissionError !== false;
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
 
@@ -108,7 +115,9 @@ export function useCollection<T = any>(
             path,
           })
           setError(contextualError)
-          errorEmitter.emit('permission-error', contextualError)
+          if (emitGlobalPermissionError) {
+            errorEmitter.emit('permission-error', contextualError)
+          }
         } else {
           setError(error)
         }
@@ -116,7 +125,7 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  }, [memoizedTargetRefOrQuery, emitGlobalPermissionError]); // Re-run if the target query/reference changes.
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
   }

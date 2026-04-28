@@ -10,7 +10,10 @@ import {
   classifyPdfError,
   MAX_PDF_BYTES,
 } from '@/lib/pdf/extract-text-from-pdf';
-import { stripExpedienteBoilerplateFromText } from '@/lib/legal/strip-expediente-boilerplate';
+import {
+  normalizePdfRawText,
+  suggestCaratulaFromPlaintext,
+} from '@/lib/legal/suggest-caratula-from-text';
 import {
   draftDoctrineArticleOutline,
   type DraftDoctrineArticleOutlineInput,
@@ -27,6 +30,7 @@ import {
 } from '@/ai/flows/summarize-doctrine-document-flow';
 import type { ServerActionResponse } from '@/lib/types';
 import { userFacingAiErrorMessage } from '@/ai/llm-retry';
+import { buildAiSiteKnowledgeContext } from '@/server/ai-site-context';
 
 /** Evita exceder contexto del modelo con PDFs muy largos (doctrina y fallos). */
 const MAX_PDF_ANALYSIS_TEXT_CHARS = 120_000;
@@ -35,7 +39,8 @@ export async function summarizeRulingAction(
   input: SummarizeLegalRulingInput
 ): Promise<ServerActionResponse<SummarizeLegalRulingOutput>> {
   try {
-    const data = await summarizeLegalRuling(input);
+    const siteKnowledgeContext = await buildAiSiteKnowledgeContext();
+    const data = await summarizeLegalRuling({ ...input, siteKnowledgeContext });
     return { data, error: null };
   } catch (err) {
     console.error('[AI Action] summarizeRulingAction failed:', err);
@@ -53,7 +58,8 @@ export async function draftOutlineAction(
   input: DraftDoctrineArticleOutlineInput
 ): Promise<ServerActionResponse<DraftDoctrineArticleOutlineOutput>> {
   try {
-    const data = await draftDoctrineArticleOutline(input);
+    const siteKnowledgeContext = await buildAiSiteKnowledgeContext();
+    const data = await draftDoctrineArticleOutline({ ...input, siteKnowledgeContext });
     return { data, error: null };
   } catch (err) {
     console.error('[AI Action] draftOutlineAction failed:', err);
@@ -106,9 +112,15 @@ export async function analyzeFalloPdfAction(
     const buffer = Buffer.from(arrayBuffer);
 
     let extractedText: string;
+    let siteKnowledgeContext: string;
     try {
-      const raw = await extractTextFromPdfBuffer(buffer);
-      extractedText = stripExpedienteBoilerplateFromText(raw);
+      const [raw, siteCtx] = await Promise.all([
+        extractTextFromPdfBuffer(buffer),
+        buildAiSiteKnowledgeContext(),
+      ]);
+      siteKnowledgeContext = siteCtx;
+      /** Texto completo: sin strip (el strip recorta la carátula que va antes de "VISTO"). */
+      extractedText = normalizePdfRawText(raw);
     } catch (err) {
       console.error('[AI Action] PDF extract failed:', err);
       return { data: null, error: classifyPdfError(err) };
@@ -127,11 +139,15 @@ export async function analyzeFalloPdfAction(
         ? `${extractedText.slice(0, MAX_PDF_ANALYSIS_TEXT_CHARS)}\n\n[… Texto truncado por longitud …]`
         : extractedText;
 
-    const aiResult = await summarizeLegalRuling({ rulingText: forModel });
+    const aiResult = await summarizeLegalRuling({ rulingText: forModel, siteKnowledgeContext });
+    const heuristTitle = suggestCaratulaFromPlaintext(extractedText);
+    const finalTitle: string | undefined = aiResult.suggestedTitle?.trim() || heuristTitle;
 
     return {
       data: {
         ...aiResult,
+        /** IA + fallback por línea C/… S/… (carátula suele quedar al inicio del PDF). */
+        suggestedTitle: finalTitle,
         extractedText,
         fileName: file.name || 'documento.pdf',
       },
@@ -182,8 +198,14 @@ export async function analyzeDoctrinePdfAction(
     const buffer = Buffer.from(arrayBuffer);
 
     let extractedText: string;
+    let siteKnowledgeContext: string;
     try {
-      extractedText = await extractTextFromPdfBuffer(buffer);
+      const [text, siteCtx] = await Promise.all([
+        extractTextFromPdfBuffer(buffer),
+        buildAiSiteKnowledgeContext(),
+      ]);
+      siteKnowledgeContext = siteCtx;
+      extractedText = text;
     } catch (err) {
       console.error('[AI Action] doctrine PDF extract failed:', err);
       return { data: null, error: classifyPdfError(err) };
@@ -202,7 +224,7 @@ export async function analyzeDoctrinePdfAction(
         ? `${extractedText.slice(0, MAX_PDF_ANALYSIS_TEXT_CHARS)}\n\n[… Texto truncado por longitud …]`
         : extractedText;
 
-    const aiResult = await summarizeDoctrineDocument({ documentText: forModel });
+    const aiResult = await summarizeDoctrineDocument({ documentText: forModel, siteKnowledgeContext });
 
     return {
       data: {
